@@ -28,6 +28,12 @@ export default function RootLayout({
     "--ink": colors.ink,
     "--background": colors.background,
     "--foreground": colors.foreground,
+  // neutral tokens for dark mode surfaces
+  "--neutral-bg-dark": colors.neutralBgDark,
+  "--neutral-card-dark": colors.neutralCardDark,
+  "--neutral-border-dark": colors.neutralBorderDark,
+  "--neutral-input-dark": colors.neutralInputDark,
+  "--neutral-placeholder-dark": colors.neutralPlaceholderDark,
   };
   return (
     <html lang="en" style={cssVars}>

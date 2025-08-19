@@ -4,12 +4,7 @@
 
 /* Tailwind v4 variables can be referenced directly via CSS variables. */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Dark mode disabled: always light */
 
 body {
   background: var(--background);
@@ -35,3 +30,6 @@ body {
 
 .link-primary { color: var(--brand); }
 .link-primary:hover { opacity: 0.9; text-decoration: underline; }
+
+/* Better dark-mode surfaces: cards, borders, inputs */
+.card { background-color: color-mix(in oklab, #fff 80%, transparent); border: 1px solid color-mix(in oklab, #0a0a0a 10%, transparent); }

@@ -13,7 +13,7 @@ const LoginSection = dynamic(async () => {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-[100dvh] bg-gradient-to-b from-white to-neutral-50 dark:from-neutral-950 dark:to-neutral-900">
+  <main className="min-h-[100dvh] bg-gradient-to-b from-white to-neutral-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
         <div className="mb-8 sm:mb-12 text-center">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink">

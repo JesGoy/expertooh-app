@@ -17,7 +17,7 @@ export default function LoginForm({ brand }: Props) {
 
   return (
   <div className="w-full max-w-md mx-auto">
-      <div className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur border border-neutral-200/60 dark:border-neutral-800 rounded-2xl shadow-sm p-6 sm:p-8">
+  <div className="bg-white/70 backdrop-blur border border-neutral-200/60 rounded-2xl shadow-sm p-6 sm:p-8">
         <div className="flex items-center gap-3 mb-6">
           {brand?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -52,7 +52,7 @@ export default function LoginForm({ brand }: Props) {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm outline-none ring-0 focus:border-brand"
+              className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-brand"
               placeholder=""
             />
           </div>
@@ -72,7 +72,7 @@ export default function LoginForm({ brand }: Props) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm outline-none ring-0 focus:border-brand"
+              className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-brand"
               placeholder="••••••••"
             />
           </div>
@@ -84,7 +84,7 @@ export default function LoginForm({ brand }: Props) {
         name="remember"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
-        className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-700 accent-brand"
+  className="h-4 w-4 rounded border-neutral-300 accent-brand"
               />
               Recordarme
             </label>
