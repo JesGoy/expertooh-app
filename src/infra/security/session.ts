@@ -8,13 +8,15 @@ export async function createSession(claims: Omit<SessionClaims, 'iat' | 'exp'>, 
   const jar = await cookies();
   const maxAge = opts?.remember ? 60 * 60 * 24 * 30 : undefined; // 30d
   const isProd = process.env.NODE_ENV === 'production';
-  jar.set(COOKIE_NAME, token, {
+  jar.set({
+    name: COOKIE_NAME,
+    value: token,
     httpOnly: true,
     secure: isProd,
     sameSite: 'lax',
     path: '/',
     ...(maxAge ? { maxAge } : {}),
-  } as any);
+  });
 }
 
 export async function destroySession() {

@@ -13,7 +13,7 @@ export default function LoginForm({ brand }: Props) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
-  const [state, formAction] = useActionState<{ error?: string }>(loginAction as any, {});
+  const [state, formAction] = useActionState<{ error?: string }, FormData>(loginAction, {});
 
   return (
   <div className="w-full max-w-md mx-auto">
