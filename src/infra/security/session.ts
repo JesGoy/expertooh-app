@@ -1,0 +1,30 @@
+import { cookies } from 'next/headers';
+import { signSession, verifySession, type SessionClaims } from './jwt';
+
+const COOKIE_NAME = 'session';
+
+export async function createSession(claims: Omit<SessionClaims, 'iat' | 'exp'>, opts?: { hours?: number; remember?: boolean }) {
+  const token = await signSession(claims, { hours: opts?.remember ? 24 * 30 : opts?.hours });
+  const jar = await cookies();
+  const maxAge = opts?.remember ? 60 * 60 * 24 * 30 : undefined; // 30d
+  const isProd = process.env.NODE_ENV === 'production';
+  jar.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: 'lax',
+    path: '/',
+    ...(maxAge ? { maxAge } : {}),
+  } as any);
+}
+
+export async function destroySession() {
+  const jar = await cookies();
+  jar.delete(COOKIE_NAME);
+}
+
+export async function getSession() {
+  const jar = await cookies();
+  const token = jar.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  return await verifySession(token);
+}

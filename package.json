@@ -1,0 +1,41 @@
+{
+  "name": "expertooh-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "hash": "node scripts/hash.js",
+    "drizzle:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "drizzle:push": "drizzle-kit push --config=drizzle.config.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "bcryptjs": "^3.0.2",
+    "drizzle-orm": "^0.36.0",
+    "jose": "^5.10.0",
+    "next": "15.4.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.30.1",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "drizzle-kit": {
+    "schema": "./src/infra/db/schema.ts",
+    "out": "./drizzle",
+    "dialect": "postgresql"
+  }
+}
