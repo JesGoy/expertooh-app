@@ -7,22 +7,8 @@ export default async function DashboardPage() {
 
   return (
   <main className="min-h-[100dvh] bg-gradient-to-b from-white to-neutral-50">
-  <header className="sticky top-0 z-10 border-b border-neutral-200/60 bg-white/70 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded bg-brand" />
-            <span className="text-sm font-semibold text-ink">ExpertooH</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-neutral-500 hidden sm:inline">{userName}</span>
-            <form action={logoutAction}>
-              <button type="submit" className="btn btn-primary text-xs px-3 py-1.5">Cerrar sesión</button>
-            </form>
-          </div>
-        </div>
-      </header>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink">Dashboard</h1>
         <p className="mt-1 text-sm text-neutral-500">Resumen de tus campañas y KPIs clave</p>
 
