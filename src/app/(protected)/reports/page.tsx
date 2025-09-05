@@ -13,16 +13,17 @@ function formatDate(d: unknown) {
   return new Date(date).toLocaleString('es-CL');
 }
 
-export default async function ReportsPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+export default async function ReportsPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = (await searchParams) || {};
   const list = makeListElementRecords();
-  const page = Number((searchParams?.page as string) || 1) || 1;
-  const pageSize = Number((searchParams?.pageSize as string) || 20) || 20;
-  const providerId = Number(searchParams?.providerId) || undefined;
-  const typeId = Number(searchParams?.typeId) || undefined;
-  const communeId = Number(searchParams?.communeId) || undefined;
-  const brandName = typeof searchParams?.brandName === 'string' ? (searchParams!.brandName as string) : undefined;
-  const year = Number(searchParams?.year) || undefined;
-  const month = Number(searchParams?.month) || undefined;
+  const page = Number((params.page as string) || 1) || 1;
+  const pageSize = Number((params.pageSize as string) || 20) || 20;
+  const providerId = Number(params.providerId) || undefined;
+  const typeId = Number(params.typeId) || undefined;
+  const communeId = Number(params.communeId) || undefined;
+  const brandName = typeof params.brandName === 'string' ? (params.brandName as string) : undefined;
+  const year = Number(params.year) || undefined;
+  const month = Number(params.month) || undefined;
 
   const { items, total } = await list.execute({ page, pageSize, providerId, typeId, communeId, brandName, year, month });
 
@@ -101,10 +102,10 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Rec
           </div>
           <div className="flex items-center gap-2">
             {page > 1 && (
-              <a className="px-3 py-1.5 border rounded hover:bg-neutral-50" href={`?${new URLSearchParams({ ...Object.fromEntries(Object.entries(searchParams || {}).map(([k,v]) => [k, String(v)])), page: String(page - 1), pageSize: String(pageSize) }).toString()}`}>Anterior</a>
+              <a className="px-3 py-1.5 border rounded hover:bg-neutral-50" href={`?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).map(([k,v]) => [k, String(v)])), page: String(page - 1), pageSize: String(pageSize) }).toString()}`}>Anterior</a>
             )}
             {page < pages && (
-              <a className="px-3 py-1.5 border rounded hover:bg-neutral-50" href={`?${new URLSearchParams({ ...Object.fromEntries(Object.entries(searchParams || {}).map(([k,v]) => [k, String(v)])), page: String(page + 1), pageSize: String(pageSize) }).toString()}`}>Siguiente</a>
+              <a className="px-3 py-1.5 border rounded hover:bg-neutral-50" href={`?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params).map(([k,v]) => [k, String(v)])), page: String(page + 1), pageSize: String(pageSize) }).toString()}`}>Siguiente</a>
             )}
           </div>
         </div>

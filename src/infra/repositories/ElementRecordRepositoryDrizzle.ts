@@ -1,5 +1,6 @@
 import type { ElementRecordRepository, ElementRecordFilters, ElementRecordListItem, ElementRecordListResult } from '@/core/application/ports/ElementRecordRepository';
 import { and, count, desc, eq, ilike } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import { getDb } from '@/infra/db/client';
 import { elementRecordTable, elementTable, providerTable, typeTable, brandTable, categoryTable, communeTable, provinceTable, regionTable } from '@/infra/db/schema';
 
@@ -10,7 +11,7 @@ export class ElementRecordRepositoryDrizzle implements ElementRecordRepository {
     const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 20));
     const offset = (page - 1) * pageSize;
 
-    const whereParts: any[] = [];
+  const whereParts: SQL[] = [];
     if (filters.providerId) whereParts.push(eq(elementTable.providerId, filters.providerId));
     if (filters.typeId) whereParts.push(eq(elementTable.typeId, filters.typeId));
     if (filters.brandName) whereParts.push(ilike(brandTable.name, `%${filters.brandName}%`));
@@ -18,7 +19,7 @@ export class ElementRecordRepositoryDrizzle implements ElementRecordRepository {
     if (filters.month) whereParts.push(eq(elementRecordTable.month, filters.month));
     if (filters.communeId) whereParts.push(eq(elementTable.communeId, filters.communeId));
 
-    const where = whereParts.length ? and(...whereParts) : undefined;
+  const where = whereParts.length ? and(...whereParts) : undefined;
 
     // total
     const totalRows = await db
@@ -26,7 +27,7 @@ export class ElementRecordRepositoryDrizzle implements ElementRecordRepository {
       .from(elementRecordTable)
       .leftJoin(elementTable, eq(elementRecordTable.elementId, elementTable.id))
       .leftJoin(brandTable, eq(elementRecordTable.brandId, brandTable.id))
-      .where(where as any);
+  .where(where);
     const total = Number(totalRows[0]?.value ?? 0);
 
     // items
@@ -66,7 +67,7 @@ export class ElementRecordRepositoryDrizzle implements ElementRecordRepository {
       .leftJoin(communeTable, eq(elementTable.communeId, communeTable.id))
       .leftJoin(provinceTable, eq(communeTable.provinceId, provinceTable.id))
       .leftJoin(regionTable, eq(provinceTable.regionId, regionTable.id))
-      .where(where as any)
+  .where(where)
       .orderBy(desc(elementRecordTable.capturedAt), desc(elementRecordTable.id))
       .limit(pageSize)
       .offset(offset);

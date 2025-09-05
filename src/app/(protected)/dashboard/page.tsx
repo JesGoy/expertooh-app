@@ -1,9 +1,7 @@
-import { getSession } from '@/infra/security/session';
-import { logoutAction } from '@/app/(auth)/actions';
+
 
 export default async function DashboardPage() {
-  const session = await getSession();
-  const userName = session?.username ?? 'Usuario';
+
 
   return (
   <main className="min-h-[100dvh] bg-gradient-to-b from-white to-neutral-50">
