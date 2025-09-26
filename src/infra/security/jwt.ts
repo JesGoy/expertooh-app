@@ -9,9 +9,9 @@ function getSecret() {
 }
 
 export type SessionClaims = JWTPayload & {
-  userId: string;
+  userId: number;
   username: string;
-  role?: string;
+  profile: string;
 };
 
 export async function signSession(claims: Omit<SessionClaims, 'iat' | 'exp'>, opts?: { hours?: number }) {

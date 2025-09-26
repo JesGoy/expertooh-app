@@ -1,4 +1,8 @@
-import { pgTable, text, timestamp, integer, varchar, uniqueIndex, index, doublePrecision, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, varchar, uniqueIndex, index, doublePrecision, numeric, pgEnum } from 'drizzle-orm/pg-core';
+import { unique } from 'drizzle-orm/pg-core';
+
+// NUEVO enum de perfiles
+export const userProfileEnum = pgEnum('user_profile', ['admin', 'agencia', 'cliente', 'proveedor']);
 
 // Matches Neon table: "User"
 export const userTable = pgTable(
@@ -12,6 +16,7 @@ export const userTable = pgTable(
     email: varchar('email', { length: 255 }).notNull().unique(),
     status: integer('status'),
     lastLoginAt: timestamp('last_login_at'),
+    profile: userProfileEnum('profile').notNull().default('cliente'), // <--- NUEVO
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
@@ -195,6 +200,25 @@ export const elementRecordTable = pgTable(
   }),
 );
 
+export const agencyBrandTable = pgTable(
+  'AgencyBrand',
+  {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    agencyUserId: integer('agency_user_id')
+      .notNull()
+      .references(() => userTable.id, { onDelete: 'cascade' }),
+    brandId: integer('brand_id')
+      .notNull()
+      .references(() => brandTable.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (t) => ({
+    uq: unique('AgencyBrand_agency_brand_uq').on(t.agencyUserId, t.brandId),
+    idxAgency: index('AgencyBrand_agency_idx').on(t.agencyUserId),
+    idxBrand: index('AgencyBrand_brand_idx').on(t.brandId),
+  }),
+);
+
 export type ProviderRow = typeof providerTable.$inferSelect;
 export type TypeRow = typeof typeTable.$inferSelect;
 export type BrandRow = typeof brandTable.$inferSelect;
@@ -202,3 +226,4 @@ export type CategoryRow = typeof categoryTable.$inferSelect;
 
 export type ElementRow = typeof elementTable.$inferSelect;
 export type ElementRecordRow = typeof elementRecordTable.$inferSelect;
+export type AgencyBrandRow = typeof agencyBrandTable.$inferSelect;

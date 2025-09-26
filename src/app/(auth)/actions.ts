@@ -18,7 +18,10 @@ export async function loginAction(prevState: { error?: string } | undefined, for
   try {
     const uc = makeLoginUser();
     const { user } = await uc.execute({ username: parsed.data.username, password: parsed.data.password });
-    await createSession({ userId: user.id, username: user.username, role: user.role }, { remember: parsed.data.remember === 'on' });
+    await createSession(
+      { userId: user.id, username: user.username, profile: user.profile },
+      { remember: parsed.data.remember === 'on' }
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error al iniciar sesión';
     return { error: message };

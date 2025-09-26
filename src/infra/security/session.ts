@@ -3,10 +3,15 @@ import { signSession, verifySession, type SessionClaims } from './jwt';
 
 const COOKIE_NAME = 'session';
 
-export async function createSession(claims: Omit<SessionClaims, 'iat' | 'exp'>, opts?: { hours?: number; remember?: boolean }) {
-  const token = await signSession(claims, { hours: opts?.remember ? 24 * 30 : opts?.hours });
+export type SessionData = Omit<SessionClaims, 'iat' | 'exp'>;
+
+export async function createSession(
+  data: SessionData,
+  opts: { remember?: boolean; hours?: number } = {},
+) {
+  const token = await signSession(data, { hours: opts.remember ? 24 * 30 : opts.hours });
   const jar = await cookies();
-  const maxAge = opts?.remember ? 60 * 60 * 24 * 30 : undefined; // 30d
+  const maxAge = opts.remember ? 60 * 60 * 24 * 30 : undefined; // 30d
   const isProd = process.env.NODE_ENV === 'production';
   jar.set({
     name: COOKIE_NAME,

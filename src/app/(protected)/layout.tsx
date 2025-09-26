@@ -9,7 +9,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   }
   return (
     <>
-      <ProtectedNavbar username={session.username} />
+      <ProtectedNavbar username={session.username} profile={session.profile} />
       {children}
     </>
   );
