@@ -21,5 +21,29 @@ export class UserRepositoryDrizzle implements UserRepository {
     } satisfies User;
   }
 
+  async findById(userId: number): Promise<User | null> {
+    const db = getDb();
+    const rows = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1);
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: String(row.id),
+      username: row.username,
+      email: row.email,
+      name: [row.firstName, row.lastName].filter(Boolean).join(' ') || 'undefined',
+      profile: row.profile || 'user',
+      isActive: (row.status ?? 1) === 1,
+      passwordHash: row.passwordHash,
+    } satisfies User;
+  }
+
+  async updatePassword(userId: number, newPasswordHash: string): Promise<void> {
+    const db = getDb();
+    await db
+      .update(userTable)
+      .set({ passwordHash: newPasswordHash, updatedAt: new Date() })
+      .where(eq(userTable.id, userId));
+  }
+
   
 }

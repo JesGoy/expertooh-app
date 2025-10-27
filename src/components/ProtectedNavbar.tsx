@@ -23,11 +23,14 @@ export default function ProtectedNavbar({ username, profile }: Props) {
             {profile === "agencia" && (
               <Link
                 href="/brand-review"
-                className="text-sm hover:text-brand transition-colors"
+                className="text-neutral-600 hover:text-ink"
               >
                 Brand Review
               </Link>
             )}
+            <Link className="text-neutral-600 hover:text-ink" href="/change-password">
+              Cambiar Contraseña
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">
