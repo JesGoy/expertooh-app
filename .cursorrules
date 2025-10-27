@@ -1,0 +1,455 @@
+# ExpertooH App - Development Rules for AI Assistants
+
+## Project Overview
+Next.js 15 application for OOH (Out-of-Home) marketing analytics with Clean Architecture and SOLID principles.
+
+## Tech Stack
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript (strict mode)
+- **Database**: PostgreSQL (Neon serverless)
+- **ORM**: Drizzle ORM
+- **Auth**: JWT with jose + custom session management
+- **Styling**: Tailwind CSS v4
+- **Validation**: Zod
+- **Hashing**: bcryptjs
+
+## Architecture Layers (Clean Architecture)
+
+### 1. Domain Layer (`src/core/domain/`)
+**Purpose**: Pure business logic, framework-agnostic.
+
+**Rules**:
+- NO external dependencies (no imports from infra, app, or frameworks)
+- Define domain entities in `entities/`
+- Define domain-specific errors in `errors/`
+- Keep entities simple, focused on data structure
+- Use TypeScript types/interfaces for entities
+- Error classes must extend Error and include meaningful codes
+
+**Example**:
+```typescript
+// ✅ Good
+export interface User {
+  id: string;
+  username: string;
+  passwordHash: string;
+  profile: 'admin' | 'agencia' | 'cliente' | 'proveedor';
+}
+
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super('Credenciales inválidas');
+    this.name = 'InvalidCredentialsError';
+  }
+}
+
+// ❌ Bad - importing from infra
+import { userTable } from '@/infra/db/schema';
+```
+
+### 2. Application Layer (`src/core/application/`)
+**Purpose**: Use cases (business operations) and contracts (ports).
+
+**Structure**:
+- `ports/`: Interfaces (repositories, services) - contracts only
+- `usecases/`: Business logic orchestration
+
+**Rules for Ports**:
+- Define repository interfaces as TypeScript interfaces
+- NO implementation details
+- Use domain entities as types
+- Each repository = one interface file
+- Naming: `{Entity}Repository.ts` (e.g., `UserRepository.ts`)
+
+**Rules for Use Cases**:
+- One class per use case
+- Constructor dependency injection (ports via deps object)
+- Execute method returns domain entities or throws domain errors
+- NO direct DB/framework imports
+- Naming: `{Action}{Entity}.ts` (e.g., `LoginUser.ts`, `ChangePassword.ts`)
+- Use descriptive input/output types
+
+**Example**:
+```typescript
+// ✅ Good - Port
+export interface UserRepository {
+  findByUsername(username: string): Promise<User | null>;
+  updatePassword(userId: number, newPasswordHash: string): Promise<void>;
+}
+
+// ✅ Good - Use Case
+export class ChangePassword {
+  constructor(
+    private readonly deps: {
+      users: UserRepository;
+      hash: HashService;
+    }
+  ) {}
+
+  async execute(input: ChangePasswordInput): Promise<void> {
+    const user = await this.deps.users.findById(input.userId);
+    if (!user) throw new PasswordChangeError('Usuario no encontrado', 'USER_NOT_FOUND');
+    
+    const isValid = await this.deps.hash.compare(input.currentPassword, user.passwordHash);
+    if (!isValid) throw new PasswordChangeError('Contraseña incorrecta', 'INVALID_CURRENT');
+    
+    const newHash = await this.deps.hash.hash(input.newPassword);
+    await this.deps.users.updatePassword(input.userId, newHash);
+  }
+}
+
+// ❌ Bad - importing DB directly
+import { db } from '@/infra/db/client';
+```
+
+### 3. Infrastructure Layer (`src/infra/`)
+**Purpose**: Implementations of ports, external services, DB access.
+
+**Structure**:
+- `repositories/`: Drizzle implementations of repository ports
+- `db/`: Database client and schema (Drizzle)
+- `security/`: Hash service, JWT, session management
+- `validation/`: Zod schemas for input validation
+- `container/`: Dependency injection factories
+
+**Rules for Repositories**:
+- Implement application port interfaces
+- Use Drizzle ORM for queries
+- Naming: `{Entity}RepositoryDrizzle.ts`
+- Map DB rows to domain entities
+- Handle null/undefined: prefer `undefined` over `null` in return types (use `?? undefined`)
+- Use typed SQL conditions: `SQL[]` from `drizzle-orm`, not `any[]`
+
+**Rules for Validation**:
+- Use Zod schemas in `validation/`
+- One file per domain concept (e.g., `auth.ts`, `password.ts`)
+- Export both schema and inferred type
+
+**Rules for Container**:
+- Factory functions to wire dependencies
+- Naming: `make{UseCase}()` (e.g., `makeLoginUser()`)
+- Instantiate repos and services, inject into use case
+- All exports in `container/auth.ts`
+
+**Example**:
+```typescript
+// ✅ Good - Repository
+export class UserRepositoryDrizzle implements UserRepository {
+  async findByUsername(username: string): Promise<User | null> {
+    const db = getDb();
+    const rows = await db.select().from(userTable).where(eq(userTable.username, username)).limit(1);
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      id: String(row.id),
+      username: row.username,
+      email: row.email,
+      passwordHash: row.passwordHash,
+      profile: row.profile ?? 'cliente',
+    };
+  }
+}
+
+// ✅ Good - Container
+export function makeChangePassword() {
+  const users = new UserRepositoryDrizzle();
+  const hash = new BcryptHashService();
+  return new ChangePassword({ users, hash });
+}
+
+// ❌ Bad - Business logic in repository
+async findByUsername(username: string) {
+  // Don't validate password here - that's use case logic
+  const user = await ...;
+  if (user && await bcrypt.compare(password, user.hash)) return user;
+}
+```
+
+### 4. Presentation Layer (`src/app/`, `src/components/`)
+**Purpose**: Next.js pages, layouts, components, server actions.
+
+**Rules for Server Actions** (`actions.ts`):
+- Always `'use server';` at top
+- Call use case via container factory
+- Validate input with Zod schemas
+- Catch domain errors and return user-friendly messages
+- Return types: `Promise<void>` for form actions, or `Promise<{ error?: string; success?: boolean }>`
+- Use `redirect()` for navigation after success
+- Session checks: `getSession()` then validate profile if needed
+
+**Rules for Pages**:
+- Server Components by default
+- Fetch session in protected routes: `getSession()` + `redirect('/login')` if null
+- Call use cases for data (via container)
+- Pass data as props to Client Components
+- Mark dynamic routes: `export const dynamic = 'force-dynamic';`
+
+**Rules for Client Components**:
+- Mark with `'use client';`
+- Use for interactivity (forms with `useActionState`, state, events)
+- Receive data from Server Component parents
+- Keep business logic in use cases, not in components
+
+**Example**:
+```typescript
+// ✅ Good - Server Action
+'use server';
+export async function changePasswordAction(
+  _prevState: ChangePasswordState,
+  formData: FormData
+): Promise<ChangePasswordState> {
+  const session = await getSession();
+  if (!session) redirect('/login');
+  
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get('currentPassword'),
+    newPassword: formData.get('newPassword'),
+  });
+  if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
+  
+  try {
+    const uc = makeChangePassword();
+    await uc.execute({ userId: session.userId, ...parsed.data });
+    return { success: true };
+  } catch (err) {
+    if (err instanceof PasswordChangeError) return { error: err.message };
+    return { error: 'Error al cambiar contraseña' };
+  }
+}
+
+// ✅ Good - Page
+export default async function ChangePasswordPage() {
+  const session = await getSession();
+  if (!session) redirect('/login');
+  return <ChangePasswordForm />;
+}
+
+// ❌ Bad - Business logic in component
+function ChangePasswordForm() {
+  const handleSubmit = async () => {
+    const hash = await bcrypt.hash(password, 10); // NO - use case should do this
+    await db.update(...); // NO - repository should do this
+  };
+}
+```
+
+## Database & Schema (Drizzle)
+
+**Rules**:
+- Schema in `src/infra/db/schema.ts`
+- Use `pgTable`, `pgEnum` for tables and enums
+- Naming: PascalCase for table variables (e.g., `userTable`, `brandTable`)
+- SQL names: match variable names without "Table" suffix (e.g., `'User'`, `'Brand'`)
+- Foreign keys: `references(() => otherTable.id, { onDelete: 'cascade' })`
+- Indexes: use `index()` and `uniqueIndex()` in table config function
+- Migrations: generate with `npm run drizzle:generate`, apply with `npm run drizzle:push`
+- Never commit raw database URLs; use `process.env.DATABASE_URL`
+
+**Example**:
+```typescript
+export const userProfileEnum = pgEnum('user_profile', ['admin', 'agencia', 'cliente', 'proveedor']);
+
+export const userTable = pgTable('User', {
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+  username: varchar('username', { length: 50 }).notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  profile: userProfileEnum('profile').notNull().default('cliente'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+```
+
+## Session & Auth
+
+**Flow**:
+1. User submits login form → `loginAction` (server action)
+2. `loginAction` validates with Zod → calls `LoginUser` use case
+3. Use case checks credentials via `UserRepository` + `HashService`
+4. On success, `createSession({ userId, username, profile })` creates JWT
+5. JWT stored in httpOnly cookie
+6. Protected routes call `getSession()` to verify JWT and get session data
+
+**Session Data**:
+```typescript
+type SessionData = {
+  userId: number;
+  username: string;
+  profile: 'admin' | 'agencia' | 'cliente' | 'proveedor';
+};
+```
+
+**Profile-based Access**:
+- Brand Review (`/brand-review`): only `profile === 'agencia'`
+- Check profile in page: `if (session.profile !== 'agencia') redirect('/dashboard');`
+
+## Styling & UI
+
+**Principles**:
+- Tailwind CSS v4 (use `@import "tailwindcss";` in globals.css)
+- CSS variables for theme colors: `--brand`, `--ink`, `--background`
+- Utility classes in `globals.css`: `.btn`, `.btn-primary`, `.text-ink`, `.bg-brand`
+- Light mode only (dark mode removed)
+- Responsive: mobile-first (use `sm:`, `md:`, `lg:`)
+- Sticky headers: `sticky top-0 z-10 backdrop-blur`
+- Cards: `rounded-2xl border border-neutral-200/60 bg-white/70 backdrop-blur`
+
+**Component Patterns**:
+- Navbar: `<ProtectedNavbar username={session.username} profile={session.profile} />`
+- Forms: use `useActionState` hook with server actions
+- Buttons: disable during pending state (`useFormStatus`)
+- Error display: conditional render `{state.error && <div>...</div>}`
+
+## TypeScript & Linting
+
+**Rules**:
+- Strict mode enabled
+- No `any` (use `unknown` or proper types)
+- Prefer interfaces for public contracts (ports), types for internal
+- Use `satisfies` for type checking without losing inference
+- ESLint: Next.js config + `no-explicit-any`
+- For Drizzle where clauses: `SQL[]` not `any[]`
+- Nullable handling: prefer `?? undefined` over `|| null`
+
+## File Naming & Structure
+
+**Conventions**:
+- PascalCase: React components, use case classes, entities (`LoginUser.ts`, `ChangePassword.ts`)
+- camelCase: utility functions, variables
+- Folders: kebab-case for routes (`change-password/`), camelCase/PascalCase for code folders
+- Server Actions: `actions.ts` in route folder
+- Client Components: separate file (e.g., `ChangePasswordForm.tsx`)
+
+**Folder Rules**:
+```
+src/
+  core/
+    domain/
+      entities/        # Domain entities (User.ts)
+      errors/          # Domain errors (AuthErrors.ts, PasswordErrors.ts)
+    application/
+      ports/           # Interfaces (UserRepository.ts, HashService.ts)
+      usecases/        # Business logic (LoginUser.ts, ChangePassword.ts)
+  infra/
+    repositories/      # Drizzle implementations (*RepositoryDrizzle.ts)
+    db/
+      client.ts        # DB connection
+      schema.ts        # Drizzle schema
+    security/          # Hash, JWT, session
+    validation/        # Zod schemas
+    container/
+      auth.ts          # DI factories
+  app/
+    (auth)/            # Auth routes (login)
+    (protected)/       # Protected routes (dashboard, reports, brand-review, change-password)
+  components/          # Reusable UI (ProtectedNavbar.tsx)
+```
+
+## Common Patterns
+
+### Adding a New Feature (e.g., "Assign Brand to Agency")
+
+1. **Domain**: Create entity if needed (`Brand.ts`)
+2. **Application Port**: Define interface (`AgencyBrandRepository.ts`)
+3. **Application Use Case**: Implement logic (`AssignAgencyBrand.ts`)
+4. **Infra Repository**: Implement port (`AgencyBrandRepositoryDrizzle.ts`)
+5. **Infra Validation**: Create Zod schema if input validation needed
+6. **Infra Container**: Add factory (`makeAssignAgencyBrand()`)
+7. **Presentation**: Create page + server action
+8. **Database**: Update schema, generate migration
+
+### Adding a New Protected Route
+
+1. Create folder in `src/app/(protected)/my-feature/`
+2. Add `page.tsx` (Server Component):
+   - Get session, redirect if null
+   - Check profile if restricted
+   - Fetch data via use case
+   - Pass to Client Component
+3. Add `actions.ts` if needed (Server Actions)
+4. Add Client Component if interactivity needed
+5. Update `ProtectedNavbar.tsx` to add link (conditional by profile if needed)
+
+### Error Handling
+
+- **Domain Errors**: Custom error classes with codes
+- **Use Cases**: Throw domain errors
+- **Server Actions**: Catch domain errors, return `{ error: string }`
+- **UI**: Display error messages from action state
+
+## SOLID Principles Applied
+
+1. **Single Responsibility**: Each use case = one operation; each repository = one entity
+2. **Open/Closed**: Use cases depend on ports (interfaces), not concrete implementations
+3. **Liskov Substitution**: Repositories implement ports, interchangeable
+4. **Interface Segregation**: Small, focused ports (UserRepository, HashService)
+5. **Dependency Inversion**: Use cases depend on abstractions (ports), not concretions; container wires dependencies
+
+## Testing Strategy (Future)
+
+- Unit test use cases by mocking ports
+- Integration test repositories against test DB
+- E2E test critical flows (login, change password)
+
+## Migration Workflow
+
+1. Edit `src/infra/db/schema.ts`
+2. Run `npm run drizzle:generate` to create migration SQL
+3. Review generated SQL in `drizzle/`
+4. Run `npm run drizzle:push` to apply to DB
+5. Commit both schema.ts and migration SQL
+
+## Security Checklist
+
+- ✅ Passwords hashed with bcrypt (cost 10)
+- ✅ JWT with expiration (8h default, 30d if remember)
+- ✅ httpOnly, secure cookies for session
+- ✅ Server-side session validation on every protected route
+- ✅ Profile-based access control
+- ✅ Input validation with Zod before use case execution
+- ✅ SQL injection prevented by Drizzle parameterized queries
+- ❌ TODO: Rate limiting on login
+- ❌ TODO: CSRF protection (Next.js 15 has built-in for Server Actions)
+
+## Environment Variables
+
+Required in `.env.local`:
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET=your-secret-key
+```
+
+Never commit `.env.local`. Keep `.env.example` updated.
+
+## Common Mistakes to Avoid
+
+❌ **Don't** import from infra in domain layer
+❌ **Don't** put business logic in repositories (only data access)
+❌ **Don't** put business logic in components/actions (use use cases)
+❌ **Don't** use `any` type (use `unknown` or specific types)
+❌ **Don't** return `null` from new repos (prefer `undefined` with `??`)
+❌ **Don't** export helpers from `'use server'` files (make them local)
+❌ **Don't** skip session checks in protected routes
+❌ **Don't** validate passwords in repository (use case responsibility)
+
+## Questions to Ask Before Coding
+
+1. Which layer does this belong to? (Domain / Application / Infra / Presentation)
+2. Is there an existing use case/repository I can extend?
+3. Do I need a new port, or can I add to existing one?
+4. Is this a Server Component (data fetching) or Client Component (interactivity)?
+5. Does this need profile-based access control?
+6. Did I validate input with Zod before calling the use case?
+7. Am I following the naming conventions?
+8. Did I handle errors properly (domain errors → user-friendly messages)?
+
+## When in Doubt
+
+- Follow existing patterns (e.g., `LoginUser.ts` for new use cases)
+- Keep layers separated (no shortcuts across boundaries)
+- Prefer composition over inheritance
+- Write descriptive types and interfaces
+- Add comments only when business logic is non-obvious
+- Keep functions small and focused
+
+---
+
+**This file should be read by AI assistants before making any changes to ensure consistency with project architecture and conventions.**
