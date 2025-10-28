@@ -3,6 +3,7 @@
 import { useState, useActionState } from "react";
 import { useFormStatus } from 'react-dom';
 import { loginAction } from '@/app/(auth)/actions';
+import { Button, Input, Checkbox } from "@/components/ui";
 
 type Props = {
   brand?: { name?: string; logoUrl?: string };
@@ -16,79 +17,61 @@ export default function LoginForm({ brand }: Props) {
   const [state, formAction] = useActionState<{ error?: string }, FormData>(loginAction, {});
 
   return (
-  <div className="w-full max-w-md mx-auto">
-  <div className="bg-white/70 backdrop-blur border border-neutral-200/60 rounded-2xl shadow-sm p-6 sm:p-8">
-        <div className="flex items-center gap-3 mb-6">
-          {brand?.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={brand.logoUrl}
-              alt={brand?.name ?? "Logo"}
-              className="h-8 w-8 rounded-md"
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-md bg-brand" />
-          )}
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-ink">
-              Inicia sesión
-            </h1>
-            <p className="text-sm text-neutral-500">
-              Accede al panel de ExpertooH
-            </p>
-          </div>
-        </div>
+  <div className="w-full max-w-xl mx-auto px-4">
+    <div className="text-center mb-6">
+      <img
+        src="/icons/logo-no-claim.svg/"
+        alt="ExpertooH"
+        className="h-16 sm:h-20 md:h-[84px] w-auto mx-auto mb-6"
+      />
+      <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-neutral-900">
+        Iniciar sesión
+      </h1>
+      <p className="text-base sm:text-lg text-neutral-600 mt-2 mb-2">
+        Continúa con usuario y contraseña
+      </p>
+    </div>
+    <div className="bg-white rounded-2xl p-4 sm:p-6">
 
-    <form action={formAction} className="space-y-4" noValidate>
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium mb-1">
-              Usuario
-            </label>
-            <input
-              id="username"
-              type="text"
-              name="username"
-              autoComplete="username"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-brand"
-              placeholder=""
-            />
-          </div>
+    <form action={formAction} className="space-y-3 sm:space-y-4" noValidate>
+          <Input
+            id="username"
+            name="username"
+            label=""
+            type="text"
+            autoComplete="username"
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Nombre de Usuario"
+            icon="/icons/sms.svg"
+            iconAlt="Usuario"
+            iconOpacity={1}
+          />
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium mb-1"
-            >
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-brand"
-              placeholder="••••••••"
-            />
-          </div>
+          <Input
+            id="password"
+            name="password"
+            label=""
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            icon="/icons/key.svg"
+            iconAlt="Contraseña"
+            iconOpacity={0.45}
+          />
 
           <div className="flex items-center justify-between">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-        name="remember"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-  className="h-4 w-4 rounded border-neutral-300 accent-brand"
-              />
-              Recordarme
-            </label>
-      <a href="#" className="text-sm link-primary">
+            <Checkbox
+              name="remember"
+              label="Recordarme"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+      <a href="#" className="text-sm text-[#FF6B00] hover:underline">
               ¿Olvidaste tu contraseña?
             </a>
           </div>
@@ -105,9 +88,12 @@ export default function LoginForm({ brand }: Props) {
       <SubmitButton />
         </form>
 
-        <p className="mt-6 text-center text-xs text-neutral-500">
-          Protegido y privado. Solo personal autorizado.
-        </p>
+        <div className="mt-8 text-center text-sm">
+          <span className="text-neutral-600">¿No tienes cuenta? </span>
+          <a href="#" className="text-neutral-900 hover:underline font-semibold">
+            Regístrate aquí
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -116,12 +102,12 @@ export default function LoginForm({ brand }: Props) {
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
+    <Button
       type="submit"
-      disabled={pending}
-      className="w-full btn btn-primary"
+      fullWidth
+      isLoading={pending}
     >
-      {pending ? "Ingresando…" : "Ingresar"}
-    </button>
+      Ingresar
+    </Button>
   );
 }

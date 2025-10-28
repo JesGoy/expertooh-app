@@ -13,20 +13,23 @@ const LoginSection = dynamic(async () => {
 
 export default function LoginPage() {
   return (
-  <main className="min-h-[100dvh] bg-gradient-to-b from-white to-neutral-50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
-        <div className="mb-8 sm:mb-12 text-center">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink">
-            Una mirada al futuro del Marketing OOH
-          </h2>
-          <p className="mt-2 text-sm text-neutral-500">
-            Accede a tu panel para optimizar tus campañas OOH
-          </p>
-        </div>
-        <div className="grid place-items-center">
-          <LoginSection />
+    <main className="min-h-[100dvh] grid md:grid-cols-2">
+      <div className="grid place-items-center p-6">
+        <LoginSection />
+      </div>
+      <div className="hidden md:block relative overflow-hidden bg-neutral-900">
+        <div className="absolute inset-0 bg-[url('/images/loginbackground.jpg')] bg-cover bg-center opacity-50 blur-sm
+        "></div>
+        <div className="absolute left-20 bottom-0 p-8">
+          <h1 className="text-[8rem] leading-[1.0] font-black tracking-tight">
+            <span className="text-white block">YOU KNOW</span>
+            <span className="text-white block">THAT</span>
+            <span className="text-[#FF6B00] block">WE</span>
+            <span className="text-[#FF6B00] block">KNOW</span>
+          </h1>
         </div>
       </div>
     </main>
   );
 }
+  

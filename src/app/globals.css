@@ -6,10 +6,18 @@
 
 /* Dark mode disabled: always light */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-urbanist: var(--font-urbanist);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-urbanist), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Theming nicety */
