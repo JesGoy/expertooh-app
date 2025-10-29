@@ -5,11 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { loginAction } from '@/app/(auth)/actions';
 import { Button, Input, Checkbox } from "@/components/ui";
 
-type Props = {
-  brand?: { name?: string; logoUrl?: string };
-};
-
-export default function LoginForm({ brand }: Props) {
+export default function LoginForm() {
   // Uncontrolled form is fine; keep minimal state for UX if desired
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

@@ -1,4 +1,4 @@
-import { and, eq, ilike, notInArray } from 'drizzle-orm';
+import { and, eq, ilike, notInArray, SQL } from 'drizzle-orm';
 import { getDb } from '@/infra/db/client';
 import { agencyBrandTable, brandTable, categoryTable } from '@/infra/db/schema';
 import { AgencyBrandRepository } from '@/core/application/ports/AgencyBrandRepository';
@@ -26,7 +26,7 @@ export class AgencyBrandRepositoryDrizzle implements AgencyBrandRepository {
       .from(agencyBrandTable)
       .where(eq(agencyBrandTable.agencyUserId, agencyUserId));
     const mineIds = mine.map(r => r.brandId);
-    const whereParts: any[] = [];
+    const whereParts: SQL[] = [];
     if (mineIds.length) whereParts.push(notInArray(brandTable.id, mineIds));
     if (search) whereParts.push(ilike(brandTable.name, `%${search}%`));
     const whereExpr = whereParts.length > 1 ? and(...whereParts) : whereParts[0];

@@ -51,7 +51,6 @@ export default function BrandReviewClient({ mine, others, initialFrom, initialTo
 
   function handleCompare() {
     // Placeholder para futura navegación / cálculo
-    // eslint-disable-next-line no-alert
     alert(
       `Comparar\nMine: ${selectedMine.join(', ')}\nOthers: ${selectedOthers.join(', ')}\nRango: ${from} -> ${to}`
     );

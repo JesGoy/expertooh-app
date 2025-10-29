@@ -7,7 +7,7 @@ export const metadata = {
 const LoginSection = dynamic(async () => {
   const LoginForm = (await import("@/components/auth/LoginForm")).default;
   return function Section() {
-  return <LoginForm brand={{ name: "ExpertooH" }} />;
+  return <LoginForm />;
   };
 });
 
