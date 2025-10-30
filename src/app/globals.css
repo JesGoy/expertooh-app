@@ -1,11 +1,3 @@
-@import "tailwindcss";
-
-/* CSS variables are injected from theme in app/layout.tsx */
-
-/* Tailwind v4 variables can be referenced directly via CSS variables. */
-
-/* Dark mode disabled: always light */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
