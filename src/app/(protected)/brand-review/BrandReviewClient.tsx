@@ -1,5 +1,8 @@
 'use client';
 import { useState, useMemo } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import './calendar.css';
 
 type BrandInfo = { id: number; name: string; categoryName?: string };
 
@@ -57,52 +60,93 @@ export default function BrandReviewClient({ mine, others, initialFrom, initialTo
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded border bg-white p-4 flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-neutral-600">Desde</label>
-              <input
-                type="date"
-                value={from}
-                onChange={e => { setFrom(e.target.value); setTouched(true); }}
-                className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand/40"
-                max={to || undefined}
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="bg-white shadow-sm rounded-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-medium text-neutral-900">Seleccionar fecha</h2>
+
+        </div>
+
+        <div className="grid grid-cols-2 gap-8">
+          <div>
+            <label className="block text-sm text-neutral-600 mb-2">Desde</label>
+            <div className="bg-[#F9F9F9] rounded-xl p-4">
+              <Calendar
+                value={from ? new Date(from) : null}
+                onChange={(value) => {
+                  const date = value as Date;
+                  if (date) {
+                    setFrom(date.toISOString().split('T')[0]);
+                    setTouched(true);
+                  }
+                }}
+                maxDate={to ? new Date(to) : undefined}
+                className="!border-0 !p-0"
+                tileClassName={({ date, view }) => {
+                  if (view === 'month' && date && from === date.toISOString().split('T')[0]) {
+                    return 'bg-[#FF6B00] text-white rounded-lg';
+                  }
+                  return '!text-sm hover:!bg-[#FFF0E6] focus:!bg-[#FFF0E6] rounded-lg';
+                }}
+                navigationLabel={({ date }) => 
+                  date.toLocaleDateString('es', { month: 'long', year: 'numeric' })
+                }
               />
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-neutral-600">Hasta</label>
-              <input
-                type="date"
-                value={to}
-                onChange={e => { setTo(e.target.value); setTouched(true); }}
-                className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand/40"
-                min={from || undefined}
+          </div>
+          <div>
+            <label className="block text-sm text-neutral-600 mb-2">Hasta</label>
+            <div className="bg-[#F9F9F9] rounded-xl p-4">
+              <Calendar
+                value={to ? new Date(to) : null}
+                onChange={(value) => {
+                  const date = value as Date;
+                  if (date) {
+                    setTo(date.toISOString().split('T')[0]);
+                    setTouched(true);
+                  }
+                }}
+                minDate={from ? new Date(from) : undefined}
+                className="!border-0 !p-0"
+                tileClassName={({ date, view }) => {
+                  if (view === 'month' && date && to === date.toISOString().split('T')[0]) {
+                    return 'bg-[#FF6B00] text-white rounded-lg';
+                  }
+                  return '!text-sm hover:!bg-[#FFF0E6] focus:!bg-[#FFF0E6] rounded-lg';
+                }}
+                navigationLabel={({ date }) => 
+                  date.toLocaleDateString('es', { month: 'long', year: 'numeric' })
+                }
               />
             </div>
+          </div>
+        </div>
+
+        {showDateError && (
+          <p className="text-sm text-red-600 mt-4">
+            El rango de fechas seleccionado no es válido
+          </p>
+        )}
+
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-neutral-700">{summary}</p>
           <button
-            disabled={compareDisabled}
             onClick={handleCompare}
-            className={`px-4 py-2 rounded text-sm font-medium transition ${
+            disabled={compareDisabled}
+            className={`px-6 py-2 rounded-lg text-sm font-medium transition-opacity ${
               compareDisabled
                 ? 'bg-neutral-200 text-neutral-500 cursor-not-allowed'
-                : 'bg-brand text-white hover:opacity-90'
+                : 'bg-[#FF6B00] text-white hover:opacity-90'
             }`}
           >
             Comparar
           </button>
-          <p className="text-sm text-neutral-700">{summary}</p>
         </div>
-        {showDateError && (
-          <p className="text-xs text-red-600">
-            Rango inválido: la fecha inicial debe ser menor o igual a la final.
-          </p>
-        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <BrandList
-          title={`Mis Marcas (${mine.length})`}
+          title="Mis Marcas"
           brands={mine}
           selected={selectedMine}
           onToggle={id => toggle(id, 'mine')}
@@ -112,7 +156,7 @@ export default function BrandReviewClient({ mine, others, initialFrom, initialTo
           emptyMsg="Sin marcas asociadas."
         />
         <BrandList
-          title={`Otras Marcas (${others.length})`}
+          title="Otras Marcas"
           brands={others}
           selected={selectedOthers}
           onToggle={id => toggle(id, 'others')}
@@ -148,57 +192,44 @@ function BrandList({
   emptyMsg,
 }: BrandListProps) {
   return (
-    <section className="border rounded bg-white p-4 flex flex-col">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-medium text-ink">{title}</h2>
-        <label className="flex items-center gap-1 cursor-pointer text-xs select-none">
-          <input
-            type="checkbox"
-            className="accent-brand"
-            checked={allChecked}
-            onChange={onToggleAll}
-            aria-label="Seleccionar todo"
-          />
-          Todo
-        </label>
+    <section className="bg-white rounded-xl p-6 flex flex-col">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-medium text-neutral-900">{title}</h2>
+      </div>
+      <div className="flex items-center justify-between text-sm text-neutral-500 px-2 mb-4">
+        <span>Marcas</span>
       </div>
       {brands.length === 0 && (
-        <p className="text-xs text-neutral-500">{emptyMsg}</p>
+        <p className="text-sm text-neutral-500">{emptyMsg}</p>
       )}
-      <ul className="divide-y overflow-auto max-h-[520px] pr-1 thin-scroll">
-        {brands.map(b => {
+      <ul className="space-y-4 overflow-auto max-h-[520px] pr-1">
+        {brands.map((b, index) => {
           const checked = selected.includes(b.id);
+          const indexStr = String(index + 1).padStart(2, '0');
           return (
-            <li key={b.id} className="flex items-center justify-between py-2 gap-3">
-              <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
-                <input
-                  type="checkbox"
-                  className="accent-brand shrink-0"
-                  checked={checked}
-                  onChange={() => onToggle(b.id)}
-                />
-                <span className="flex flex-col min-w-0">
-                  <span className={`text-sm font-medium truncate ${checked ? 'text-ink' : 'text-neutral-800'}`}>
-                    {b.name}
-                  </span>
-                  {b.categoryName && (
-                    <span className="text-[10px] uppercase tracking-wide text-neutral-500 truncate">
-                      {b.categoryName}
-                    </span>
-                  )}
-                </span>
-              </label>
-              {checked && (
-                <span
-                  className={`text-[10px] px-2 py-1 rounded-full font-semibold ${
-                    accent === 'brand'
-                      ? 'bg-brand/10 text-brand'
-                      : 'bg-neutral-200 text-neutral-700'
-                  }`}
-                >
-                  OK
-                </span>
-              )}
+            <li key={b.id} className="group flex items-center gap-4">
+              <button
+                onClick={() => onToggle(b.id)}
+                className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-colors ${
+                  checked 
+                    ? 'bg-emerald-500 text-white' 
+                    : 'border-2 border-neutral-200 hover:border-emerald-500'
+                }`}
+              >
+                {checked && (
+                  <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+                    <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </button>
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 font-medium">
+                {indexStr}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-neutral-900 font-medium truncate">
+                  {b.name}
+                </p>
+              </div>
             </li>
           );
         })}
