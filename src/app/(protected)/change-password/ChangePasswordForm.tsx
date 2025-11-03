@@ -1,89 +1,94 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useFormState, useFormStatus } from 'react-dom';
 import { changePasswordAction, type ChangePasswordState } from './actions';
+import { Button, Input } from '@/components/ui';
 
 const initialState: ChangePasswordState = {};
 
 export default function ChangePasswordForm() {
-  const [state, formAction, pending] = useActionState(changePasswordAction, initialState);
+  const [state, formAction] = useFormState(changePasswordAction, initialState);
+  const { pending } = useFormStatus();
 
   return (
-    <div className="rounded border bg-white p-6">
-      {state.success && (
-        <div className="mb-4 rounded bg-green-50 border border-green-200 p-3 text-sm text-green-800">
-          ✓ Contraseña actualizada correctamente
-        </div>
-      )}
+    <div className="w-full max-w-xl mx-auto px-4">
+      <div className="text-center mb-6">
+        <img
+          src="/icons/logo-no-claim.svg"
+          alt="ExpertooH"
+          className="h-16 sm:h-20 md:h-[84px] w-auto mx-auto mb-6"
+        />
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-neutral-900">
+          Cambiar contraseña
+        </h1>
+        <p className="text-base sm:text-lg text-neutral-600 mt-2 mb-2">
+          Ingresa y confirma tu nueva contraseña
+        </p>
+      </div>
 
-      {state.error && (
-        <div className="mb-4 rounded bg-red-50 border border-red-200 p-3 text-sm text-red-800">
-          {state.error}
-        </div>
-      )}
+      <div className="bg-white rounded-2xl p-4 sm:p-6">
+        {state.success && (
+          <div className="mb-4 rounded-2xl bg-green-50 border border-green-200 p-3 text-sm text-green-800">
+            ✓ Contraseña actualizada correctamente
+          </div>
+        )}
 
-      <form action={formAction} className="space-y-4">
-        <div>
-          <label htmlFor="currentPassword" className="block text-sm font-medium text-neutral-700 mb-1">
-            Contraseña Actual
-          </label>
-          <input
+        {state.error && (
+          <div className="mb-4 rounded-2xl bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+            {state.error}
+          </div>
+        )}
+
+        <form action={formAction} className="space-y-3 sm:space-y-4">
+          <Input
             type="password"
             id="currentPassword"
             name="currentPassword"
+            label=""
+            placeholder="Contraseña actual"
             required
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40"
+            icon="/icons/key.svg"
+            iconAlt="Contraseña"
+            iconOpacity={0.45}
+            error={state.fieldErrors?.currentPassword?.[0]}
           />
-          {state.fieldErrors?.currentPassword && (
-            <p className="text-xs text-red-600 mt-1">{state.fieldErrors.currentPassword[0]}</p>
-          )}
-        </div>
 
-        <div>
-          <label htmlFor="newPassword" className="block text-sm font-medium text-neutral-700 mb-1">
-            Nueva Contraseña
-          </label>
-          <input
+          <Input
             type="password"
             id="newPassword"
             name="newPassword"
+            label=""
+            placeholder="Nueva contraseña"
             required
             minLength={8}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40"
+            icon="/icons/key.svg"
+            iconAlt="Contraseña"
+            iconOpacity={0.45}
+            error={state.fieldErrors?.newPassword?.[0]}
           />
-          {state.fieldErrors?.newPassword && (
-            <p className="text-xs text-red-600 mt-1">{state.fieldErrors.newPassword[0]}</p>
-          )}
-        </div>
 
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700 mb-1">
-            Confirmar Nueva Contraseña
-          </label>
-          <input
+          <Input
             type="password"
             id="confirmPassword"
             name="confirmPassword"
+            label=""
+            placeholder="Confirmar nueva contraseña"
             required
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40"
+            icon="/icons/key.svg"
+            iconAlt="Contraseña"
+            iconOpacity={0.45}
+            error={state.fieldErrors?.confirmPassword?.[0]}
           />
-          {state.fieldErrors?.confirmPassword && (
-            <p className="text-xs text-red-600 mt-1">{state.fieldErrors.confirmPassword[0]}</p>
-          )}
-        </div>
 
-        <button
-          type="submit"
-          disabled={pending}
-          className={`w-full px-4 py-2 rounded text-sm font-medium transition ${
-            pending
-              ? 'bg-neutral-200 text-neutral-500 cursor-not-allowed'
-              : 'bg-brand text-white hover:opacity-90'
-          }`}
-        >
-          {pending ? 'Actualizando...' : 'Cambiar Contraseña'}
-        </button>
-      </form>
+          <Button
+            type="submit"
+            fullWidth
+            isLoading={pending}
+          >
+            Cambiar Contraseña
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
