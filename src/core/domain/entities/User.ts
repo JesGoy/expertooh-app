@@ -1,3 +1,5 @@
+import type { UserProfile } from '../constants/profiles';
+
 export type UserId = string;
 
 export interface User {
@@ -9,7 +11,7 @@ export interface User {
   firstName?: string | null;
   lastName?: string | null;
   isActive?: boolean;
-  profile: 'admin' | 'agencia' | 'cliente' | 'proveedor'; // <--- agregado
+  profile: UserProfile;
   lastLoginAt?: Date | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;

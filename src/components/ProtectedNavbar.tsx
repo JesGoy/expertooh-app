@@ -1,15 +1,11 @@
 'use client';
 
-import Link from "next/link";
-import { logoutAction } from "@/app/(auth)/actions";
-
 interface Props {
   username: string;
-  profile: string;
   onMenuToggle?: () => void;
 }
 
-export default function ProtectedNavbar({ username, profile, onMenuToggle }: Props) {
+export default function ProtectedNavbar({ username, onMenuToggle }: Props) {
   // Extraer iniciales del username para avatar
   const initials = username
     ? username
@@ -50,23 +46,12 @@ export default function ProtectedNavbar({ username, profile, onMenuToggle }: Pro
 
         {/* Avatar de usuario con dropdown chevron */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-9 h-9 rounded-full bg-[#1e293b] text-white flex items-center justify-center text-xs font-semibold">
+          <div className="w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center text-xs font-semibold">
             {initials}
           </div>
           <img src="/icons/chevron-down.svg" alt="" className="w-4 h-4 opacity-40" />
         </div>
       </div>
-
-      {/* Navegación oculta - Ahora está en ProtectedSidebar */}
-      <nav className="hidden">
-        <Link href="/dashboard">Dashboard</Link>
-        <Link href="/reports">Reportes</Link>
-        {profile === "agencia" && <Link href="/brand-review">Brand Review</Link>}
-        <Link href="/change-password">Cambiar Contraseña</Link>
-        <form action={logoutAction}>
-          <button type="submit">Cerrar sesión</button>
-        </form>
-      </nav>
     </header>
   );
 }

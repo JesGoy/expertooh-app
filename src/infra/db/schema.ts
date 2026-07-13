@@ -188,6 +188,13 @@ export const elementRecordTable = pgTable(
     areaM2: doublePrecision('area_m2'), // from MTS2
     status: integer('status'),
     userAgent: varchar('user_agent', { length: 120 }), // USUARIO_MOVIL
+    // audience metrics (from PERSONAS / HOMBRES / MUJERES / NSE_*)
+    persons: integer('persons'), // estimated audience (PERSONAS)
+    malePct: doublePrecision('male_pct'), // 0-1 proportion (HOMBRES)
+    femalePct: doublePrecision('female_pct'), // 0-1 proportion (MUJERES)
+    nseHighPct: doublePrecision('nse_high_pct'), // 0-1 proportion (NSE_ALTO)
+    nseMidPct: doublePrecision('nse_mid_pct'), // 0-1 proportion (NSE_MEDIO)
+    nseLowPct: doublePrecision('nse_low_pct'), // 0-1 proportion (NSE_BAJO)
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
@@ -197,6 +204,7 @@ export const elementRecordTable = pgTable(
 
     obsCapturedIdx: index('Obs_captured_idx').on(t.capturedAt),
     obsYearMonthIdx: index('Obs_year_month_idx').on(t.year, t.month),
+    obsBrandYearMonthIdx: index('Obs_brand_year_month_idx').on(t.brandId, t.year, t.month),
   }),
 );
 

@@ -1,6 +1,7 @@
 import { getSession } from '@/infra/security/session';
 import { redirect } from 'next/navigation';
 import dynamic from "next/dynamic";
+import { ROUTES } from '@/lib/routes';
 
 export const runtime = 'nodejs';
 export const metadata = {
@@ -27,7 +28,7 @@ const ChangePasswordSection = dynamic(() => import("./ChangePasswordForm"), {
 
 export default async function ChangePasswordPage() {
   const session = await getSession();
-  if (!session) redirect('/login');
+  if (!session) redirect(ROUTES.LOGIN);
 
   return (
     <main className="min-h-[100dvh] grid md:grid-cols-2">
@@ -40,8 +41,8 @@ export default async function ChangePasswordPage() {
           <h1 className="text-[8rem] leading-[1.0] font-black tracking-tight">
             <span className="text-white block">YOU KNOW</span>
             <span className="text-white block">THAT</span>
-            <span className="text-[#FF6B00] block">WE</span>
-            <span className="text-[#FF6B00] block">KNOW</span>
+            <span className="text-brand block">WE</span>
+            <span className="text-brand block">KNOW</span>
           </h1>
         </div>
       </div>

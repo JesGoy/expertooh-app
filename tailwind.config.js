@@ -7,6 +7,7 @@ module.exports = {
     extend: {
       colors: {
         brand: 'var(--brand)',
+        ink: 'var(--ink)',
       },
     },
   },

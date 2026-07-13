@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { makeChangePassword } from '@/infra/container/auth';
 import { changePasswordSchema } from '@/infra/validation/password';
 import { PasswordChangeError } from '@/core/domain/errors/PasswordErrors';
+import { ROUTES } from '@/lib/routes';
 
 export type ChangePasswordState = {
   success?: boolean;
@@ -17,7 +18,7 @@ export async function changePasswordAction(
   formData: FormData
 ): Promise<ChangePasswordState> {
   const session = await getSession();
-  if (!session) redirect('/login');
+  if (!session) redirect(ROUTES.LOGIN);
 
   const data = {
     currentPassword: formData.get('currentPassword') as string,

@@ -1,7 +1,7 @@
 "use client";
 
 import { ButtonHTMLAttributes, forwardRef } from "react";
-import { cn } from "./lib/cn";
+import { cn } from "@/lib/utils";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost";
@@ -27,7 +27,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = "inline-flex items-center justify-center font-medium transition-colors rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
     
     const variants = {
-      primary: "bg-[#FF6B00] text-white hover:bg-[#FF6B00]/90 focus-visible:ring-[#FF6B00]",
+      primary: "bg-brand text-white hover:bg-brand/90 focus-visible:ring-brand",
       secondary: "bg-neutral-900 text-white hover:bg-neutral-800 focus-visible:ring-neutral-900",
       outline: "border border-neutral-200 bg-white hover:bg-neutral-50 focus-visible:ring-neutral-900",
       ghost: "hover:bg-neutral-100 focus-visible:ring-neutral-900",

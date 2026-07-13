@@ -1,0 +1,30 @@
+/* Estilos de impresión del reporte Brand Review (export PDF vía imprimir) */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  .print-hidden,
+  aside,
+  header {
+    display: none !important;
+  }
+
+  main {
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .print-container {
+    width: 100%;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
+  }
+}

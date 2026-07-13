@@ -54,3 +54,7 @@ next-env.d.ts
 Thumbs.db
 ehthumbs.db
 desktop.ini
+
+# large data / import dumps (no commitear datasets crudos)
+/*.csv
+/Base de OR*.csv

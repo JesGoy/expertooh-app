@@ -67,7 +67,7 @@ export default function LoginForm() {
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
             />
-      <a href="#" className="text-sm text-[#FF6B00] hover:underline">
+      <a href="#" className="text-sm text-brand hover:underline">
               ¿Olvidaste tu contraseña?
             </a>
           </div>

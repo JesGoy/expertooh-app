@@ -9,7 +9,9 @@ Next.js 15 application for OOH (Out-of-Home) marketing analytics with Clean Arch
 - **Database**: PostgreSQL (Neon serverless)
 - **ORM**: Drizzle ORM
 - **Auth**: JWT with jose + custom session management
-- **Styling**: Tailwind CSS v4
+- **Styling**: Tailwind CSS v3 (`tailwind.config.js` + `@tailwind base/components/utilities` in globals.css)
+- **Charts**: Recharts (client components only)
+- **Export**: exceljs (Excel, Node route handlers) + react-to-print (PDF)
 - **Validation**: Zod
 - **Hashing**: bcryptjs
 
@@ -278,14 +280,16 @@ type SessionData = {
 ```
 
 **Profile-based Access**:
-- Brand Review (`/brand-review`): only `profile === 'agencia'`
-- Check profile in page: `if (session.profile !== 'agencia') redirect('/dashboard');`
+- Reports module (`/reports` and children, e.g. `/reports/brand-review`): profiles `'agencia'` and `'admin'` (see `REPORTS` registry `profiles` field)
+- Check profile in page using the constants module, never string literals:
+  `if (!canAccessReport(session.profile, report)) redirect(ROUTES.DASHBOARD);`
 
 ## Styling & UI
 
 **Principles**:
-- Tailwind CSS v4 (use `@import "tailwindcss";` in globals.css)
-- CSS variables for theme colors: `--brand`, `--ink`, `--background`
+- Tailwind CSS v3 (`@tailwind base/components/utilities` in globals.css, tokens in `tailwind.config.js`)
+- CSS variables for theme colors: `--brand` (#ff6600), `--ink` (#444f62), `--background` — injected in `src/app/layout.tsx` from `src/styles/theme.ts` (single source of truth, aligned with expertooh.cl)
+- Tailwind tokens: `brand`, `ink` (e.g. `bg-brand`, `text-ink`, `bg-brand/10`, `ring-brand/30`)
 - Utility classes in `globals.css`: `.btn`, `.btn-primary`, `.text-ink`, `.bg-brand`
 - Light mode only (dark mode removed)
 - Responsive: mobile-first (use `sm:`, `md:`, `lg:`)
@@ -297,6 +301,51 @@ type SessionData = {
 - Forms: use `useActionState` hook with server actions
 - Buttons: disable during pending state (`useFormStatus`)
 - Error display: conditional render `{state.error && <div>...</div>}`
+
+## Clean Code Standards
+
+**No magic strings/numbers**:
+- User profiles: import from `src/core/domain/constants/profiles.ts` (`USER_PROFILES`, `UserProfile` type). Never write `'agencia'`/`'admin'` literals in pages, actions or components.
+- Routes: import from `src/lib/routes.ts` (`ROUTES.LOGIN`, `ROUTES.DASHBOARD`, `ROUTES.REPORTS`, `ROUTES.REPORT_BRAND_REVIEW`, ...). Never write `'/login'`/`'/dashboard'` literals.
+- Repeated numeric limits (page sizes, max selections) → named constants near their domain (`MAX_BRANDS_PER_REVIEW`), not inline numbers.
+
+**No hardcoded colors**:
+- Forbidden: literal `#hex` values inside components/pages (e.g. `bg-[#FF6B00]`).
+- Allowed sources only: Tailwind tokens (`brand`, `ink`, `neutral-*`), CSS vars (`var(--brand)`), or exported constants from `src/styles/` (e.g. `chartPalette.ts`).
+- Third-party CSS overrides must use CSS variables, not repeated hex literals.
+
+**Size limits** (signals to extract, enforced in review):
+- Functions ≤ 40 lines. React components ≤ 150 lines (extract subcomponents/helpers). Files ≤ 300 lines → consider splitting.
+- Max 3 nesting levels; prefer early returns over nested `if/else`.
+
+**DRY**:
+- One `cn()` helper only: `src/lib/utils.ts`. Do not duplicate it.
+- A className string repeated ≥ 3 times → extract to a constant, helper or component.
+- Duplicated JSX blocks (e.g. two near-identical calendars/inputs) → extract a parametrized component.
+
+**Dead code**:
+- No commented-out or `hidden` "just in case" code. Delete it — git remembers.
+- Removing a feature includes removing its now-unused use cases, ports, repos and deps.
+
+**Naming**: Spanish for business/domain-facing text (UI labels, error messages), English for code identifiers.
+
+## Reports Module
+
+- `/reports` is an extensible hub. Report types are registered in `src/app/(protected)/reports/registry.ts` (`ReportDefinition { slug, title, description, icon, profiles, status }`).
+- Adding a new report = add a `REPORTS` entry + create `src/app/(protected)/reports/<slug>/` with its own `page.tsx`, use case and (if needed) port/repo. Never modify the hub logic.
+- Generic visualization components live in `src/components/reports/` (KpiCard, ChartCard, ComparisonTable, PhotoGallery — server-safe) and `src/components/charts/` (Recharts wrappers — client). Reports compose these; they do not create one-off chart components.
+- Aggregations ALWAYS happen in SQL via a use case + repository (GROUP BY in Drizzle). Never fetch raw rows into a server component and aggregate in JS.
+- Report filters travel via URL searchParams (shareable links); a `searchParams.ts` module per report provides `parse...`/`to...QueryString` mirror functions, reused by the page and its export route handler.
+- Neon HTTP driver: no interactive transactions; batch independent aggregation queries with `Promise.all` (target 4-6 queries per report).
+
+## Charts & Export
+
+- Recharts only inside `'use client'` components; `ResponsiveContainer` needs a fixed-height parent (`h-72`) and `min-w-0` in grid cells.
+- Categorical palette: `src/styles/chartPalette.ts` (`CHART_CATEGORICAL` — fixed order, never cycle; `CHART_NEUTRAL` for "SIN PUBLICIDAD"/others; `CHART_GRID`; `CHART_AXIS_TEXT`).
+- Color follows the brand: compute the brand→color map once per page (`assignBrandColors`) and pass it to every chart, table chip and legend. Same brand = same color everywhere.
+- One Y axis per chart. Metric switching (faces/investment/m²/audience) is a client-side tab over already-fetched data — never a re-query.
+- Excel export: exceljs in a route handler (`export const runtime = 'nodejs'`), reusing the same use case + searchParams parser as the page.
+- PDF export: react-to-print + `@media print` CSS (`break-inside: avoid` on cards). Do not use jspdf/html2canvas (rasterizes SVG, unmaintained).
 
 ## TypeScript & Linting
 
@@ -323,11 +372,12 @@ type SessionData = {
 src/
   core/
     domain/
+      constants/       # Shared domain constants (profiles.ts)
       entities/        # Domain entities (User.ts)
-      errors/          # Domain errors (AuthErrors.ts, PasswordErrors.ts)
+      errors/          # Domain errors (AuthErrors.ts, PasswordErrors.ts, ReportErrors.ts)
     application/
-      ports/           # Interfaces (UserRepository.ts, HashService.ts)
-      usecases/        # Business logic (LoginUser.ts, ChangePassword.ts)
+      ports/           # Interfaces (UserRepository.ts, BrandReviewRepository.ts)
+      usecases/        # Business logic (LoginUser.ts, GetBrandReview.ts)
   infra/
     repositories/      # Drizzle implementations (*RepositoryDrizzle.ts)
     db/
@@ -336,11 +386,22 @@ src/
     security/          # Hash, JWT, session
     validation/        # Zod schemas
     container/
-      auth.ts          # DI factories
+      auth.ts          # DI factories (auth domain)
+      reports.ts       # DI factories (reports domain)
+  lib/
+    utils.ts           # cn() and generic helpers (single source)
+    routes.ts          # Route constants (ROUTES)
+  styles/
+    theme.ts           # Theme tokens (brand, ink) — source of CSS vars
+    chartPalette.ts    # Categorical chart palette
   app/
     (auth)/            # Auth routes (login)
-    (protected)/       # Protected routes (dashboard, reports, brand-review, change-password)
-  components/          # Reusable UI (ProtectedNavbar.tsx)
+    (protected)/       # Protected routes (dashboard, reports/*, change-password)
+    api/               # Route handlers (exports, etc.)
+  components/
+    ui/                # Presentational primitives (Button, Input, Checkbox)
+    reports/           # Generic report building blocks (KpiCard, ChartCard, ...)
+    charts/            # Recharts client wrappers (SovDonut, TrendChart, ...)
 ```
 
 ## Common Patterns
@@ -366,7 +427,7 @@ src/
    - Pass to Client Component
 3. Add `actions.ts` if needed (Server Actions)
 4. Add Client Component if interactivity needed
-5. Update `ProtectedNavbar.tsx` to add link (conditional by profile if needed)
+5. Update `ProtectedSidebar.tsx` to add link (conditional by profile if needed, using constants from `profiles.ts`/`routes.ts`)
 
 ### Error Handling
 
@@ -429,6 +490,10 @@ Never commit `.env.local`. Keep `.env.example` updated.
 ❌ **Don't** export helpers from `'use server'` files (make them local)
 ❌ **Don't** skip session checks in protected routes
 ❌ **Don't** validate passwords in repository (use case responsibility)
+❌ **Don't** write profile/route string literals (use `profiles.ts` / `routes.ts` constants)
+❌ **Don't** hardcode `#hex` colors in components (use tokens or `src/styles/` constants)
+❌ **Don't** aggregate data rows in JS inside pages (aggregate in SQL via use case + repo)
+❌ **Don't** leave dead code, unused deps or placeholder handlers (`alert()`) behind
 
 ## Questions to Ask Before Coding
 
