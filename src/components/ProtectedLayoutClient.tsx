@@ -25,9 +25,8 @@ export default function ProtectedLayoutClient({ username, profile, children }: P
       {/* Área principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Navbar */}
-        <ProtectedNavbar 
-          username={username} 
-          profile={profile}
+        <ProtectedNavbar
+          username={username}
           onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 

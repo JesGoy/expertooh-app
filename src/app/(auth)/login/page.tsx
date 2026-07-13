@@ -24,8 +24,8 @@ export default function LoginPage() {
           <h1 className="text-[8rem] leading-[1.0] font-black tracking-tight">
             <span className="text-white block">YOU KNOW</span>
             <span className="text-white block">THAT</span>
-            <span className="text-[#FF6B00] block">WE</span>
-            <span className="text-[#FF6B00] block">KNOW</span>
+            <span className="text-brand block">WE</span>
+            <span className="text-brand block">KNOW</span>
           </h1>
         </div>
       </div>

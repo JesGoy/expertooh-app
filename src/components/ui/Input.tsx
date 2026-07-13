@@ -1,7 +1,7 @@
 "use client";
 
 import { InputHTMLAttributes, forwardRef, useState } from "react";
-import { cn } from "./lib/cn";
+import { cn } from "@/lib/utils";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
@@ -38,9 +38,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           <input
             className={cn(
-              "rounded-2xl border border-neutral-200 bg-[#F9F9F9] text-[15px] outline-none transition-colors",
+              "rounded-2xl border border-neutral-200 bg-neutral-50 text-[15px] outline-none transition-colors",
               "placeholder:text-neutral-500",
-              "focus:border-[#FF6B00] focus:bg-white",
+              "focus:border-brand focus:bg-white",
               "disabled:cursor-not-allowed disabled:opacity-50",
               icon ? "pl-12" : "px-4",
               isPassword ? "pr-12" : "pr-4",

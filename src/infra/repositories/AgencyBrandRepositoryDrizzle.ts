@@ -44,6 +44,21 @@ export class AgencyBrandRepositoryDrizzle implements AgencyBrandRepository {
       .limit(limit);
   }
 
+  async searchBrands(search?: string, limit = 40) {
+    const db = getDb();
+    return db
+      .select({
+        id: brandTable.id,
+        name: brandTable.name,
+        categoryName: categoryTable.name,
+      })
+      .from(brandTable)
+      .leftJoin(categoryTable, eq(brandTable.categoryId, categoryTable.id))
+      .where(search ? ilike(brandTable.name, `%${search}%`) : undefined)
+      .orderBy(brandTable.name)
+      .limit(limit);
+  }
+
   async assign(agencyUserId: number, brandId: number) {
     const db = getDb();
     await db.insert(agencyBrandTable)

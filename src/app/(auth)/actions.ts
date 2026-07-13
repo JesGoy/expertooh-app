@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { makeLoginUser } from '@/infra/container/auth';
 import { loginSchema } from '@/infra/validation/auth';
 import { createSession, destroySession } from '@/infra/security/session';
+import { ROUTES } from '@/lib/routes';
 
 export async function loginAction(prevState: { error?: string } | undefined, formData: FormData) {
   const username = String(formData.get('username') || '');
@@ -28,10 +29,10 @@ export async function loginAction(prevState: { error?: string } | undefined, for
   }
 
   // If everything succeeded, perform the redirect outside the try/catch so it isn't swallowed
-  redirect('/');
+  redirect(ROUTES.ROOT);
 }
 
 export async function logoutAction() {
   await destroySession();
-  redirect('/login');
+  redirect(ROUTES.LOGIN);
 }
