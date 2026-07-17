@@ -3,7 +3,7 @@
  * Dimensiones casi estáticas: se cachean en el container.
  */
 
-export type CatalogItem = { id: number; name: string };
+export type CatalogItem = { id: number; name: string; detail?: string };
 
 export type ReportCatalogs = {
   regions: CatalogItem[];
@@ -14,4 +14,6 @@ export type ReportCatalogs = {
 
 export interface ReportCatalogsRepository {
   getCatalogs(): Promise<ReportCatalogs>;
+  /** Comunas con su región como `detail` (desambigua nombres homónimos) */
+  getCommunes(): Promise<CatalogItem[]>;
 }

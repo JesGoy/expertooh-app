@@ -6,15 +6,13 @@ import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
 
 interface PrintableReportProps {
-  /** Query string de los filtros actuales (misma URL que la página) */
-  queryString: string;
+  /** URL completa de export (endpoint + query string de los filtros actuales) */
+  exportHref: string;
   documentTitle: string;
   children: ReactNode;
 }
 
-const EXPORT_ENDPOINT = '/api/reports/brand-review/export';
-
-export default function PrintableReport({ queryString, documentTitle, children }: PrintableReportProps) {
+export default function PrintableReport({ exportHref, documentTitle, children }: PrintableReportProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({ contentRef, documentTitle });
 
@@ -22,7 +20,7 @@ export default function PrintableReport({ queryString, documentTitle, children }
     <div className="space-y-4">
       <div className="flex justify-end gap-2 print-hidden">
         <a
-          href={`${EXPORT_ENDPOINT}?${queryString}`}
+          href={exportHref}
           download
           className="inline-flex items-center rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-ink hover:bg-neutral-50 transition-colors"
         >
