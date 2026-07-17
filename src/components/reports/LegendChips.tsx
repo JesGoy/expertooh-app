@@ -1,29 +1,29 @@
-interface LegendBrand {
-  brandId: number;
+interface LegendEntity {
+  entityId: number;
   name: string;
   color: string;
   isOwn: boolean;
 }
 
-interface BrandLegendChipsProps {
-  brands: LegendBrand[];
+interface LegendChipsProps {
+  entities: LegendEntity[];
 }
 
-export default function BrandLegendChips({ brands }: BrandLegendChipsProps) {
+export default function LegendChips({ entities }: LegendChipsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {brands.map((brand) => (
+      {entities.map((entity) => (
         <span
-          key={brand.brandId}
+          key={entity.entityId}
           className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs text-ink"
         >
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ backgroundColor: brand.color }}
+            style={{ backgroundColor: entity.color }}
             aria-hidden="true"
           />
-          {brand.name}
-          {brand.isOwn && <span className="text-neutral-400">· propia</span>}
+          {entity.name}
+          {entity.isOwn && <span className="text-neutral-400">· propia</span>}
         </span>
       ))}
     </div>

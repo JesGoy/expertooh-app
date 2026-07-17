@@ -1,45 +1,52 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { BrandListItem } from '@/core/application/ports/AgencyBrandRepository';
 import { cn } from '@/lib/utils';
 
-interface BrandPickerProps {
+export interface EntityListItem {
+  id: number;
+  name: string;
+  detail?: string | null;
+}
+
+interface EntityPickerProps {
   title: string;
   subtitle?: string;
-  brands: BrandListItem[];
+  items: EntityListItem[];
   selectedIds: number[];
   onToggle: (id: number) => void;
   /** true cuando el set alcanzó el máximo: bloquea agregar (no quitar) */
   selectionFull: boolean;
   emptyMessage: string;
-  /** Acción de gestión por fila (asignar/quitar de "mis marcas"), solo agencia */
+  searchPlaceholder: string;
+  /** Acción de gestión por fila (asignar/quitar de "mis marcas"), solo brand-review */
   starAction?: (formData: FormData) => Promise<void>;
   starLabel?: string;
 }
 
 const VISIBLE_LIMIT = 60;
 
-export default function BrandPicker({
+export default function EntityPicker({
   title,
   subtitle,
-  brands,
+  items,
   selectedIds,
   onToggle,
   selectionFull,
   emptyMessage,
+  searchPlaceholder,
   starAction,
   starLabel,
-}: BrandPickerProps) {
+}: EntityPickerProps) {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return brands;
-    return brands.filter(
-      (b) => b.name.toLowerCase().includes(term) || b.categoryName?.toLowerCase().includes(term),
+    if (!term) return items;
+    return items.filter(
+      (item) => item.name.toLowerCase().includes(term) || item.detail?.toLowerCase().includes(term),
     );
-  }, [brands, search]);
+  }, [items, search]);
 
   const visible = filtered.slice(0, VISIBLE_LIMIT);
 
@@ -54,21 +61,21 @@ export default function BrandPicker({
         type="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar marca o categoría…"
+        placeholder={searchPlaceholder}
         className="mb-3 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white transition-colors"
       />
 
-      {brands.length === 0 && <p className="text-sm text-neutral-500">{emptyMessage}</p>}
+      {items.length === 0 && <p className="text-sm text-neutral-500">{emptyMessage}</p>}
 
       <ul className="space-y-1 overflow-y-auto max-h-64 pr-1 thin-scroll">
-        {visible.map((brand) => {
-          const checked = selectedIds.includes(brand.id);
+        {visible.map((item) => {
+          const checked = selectedIds.includes(item.id);
           const disabled = !checked && selectionFull;
           return (
-            <li key={brand.id} className="flex items-center gap-2">
+            <li key={item.id} className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => onToggle(brand.id)}
+                onClick={() => onToggle(item.id)}
                 disabled={disabled}
                 className={cn(
                   'flex-1 flex items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-colors',
@@ -88,14 +95,14 @@ export default function BrandPicker({
                     </svg>
                   )}
                 </span>
-                <span className="truncate">{brand.name}</span>
-                {brand.categoryName && (
-                  <span className="ml-auto text-xs text-neutral-400 truncate max-w-[40%]">{brand.categoryName}</span>
+                <span className="truncate">{item.name}</span>
+                {item.detail && (
+                  <span className="ml-auto text-xs text-neutral-400 truncate max-w-[40%]">{item.detail}</span>
                 )}
               </button>
               {starAction && (
                 <form action={starAction}>
-                  <input type="hidden" name="brandId" value={brand.id} />
+                  <input type="hidden" name="brandId" value={item.id} />
                   <button
                     type="submit"
                     title={starLabel}

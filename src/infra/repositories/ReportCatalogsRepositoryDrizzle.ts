@@ -1,6 +1,15 @@
+import { eq } from 'drizzle-orm';
 import { getDb } from '@/infra/db/client';
-import { categoryTable, providerTable, regionTable, typeTable } from '@/infra/db/schema';
+import {
+  categoryTable,
+  communeTable,
+  provinceTable,
+  providerTable,
+  regionTable,
+  typeTable,
+} from '@/infra/db/schema';
 import type {
+  CatalogItem,
   ReportCatalogs,
   ReportCatalogsRepository,
 } from '@/core/application/ports/ReportCatalogsRepository';
@@ -15,5 +24,15 @@ export class ReportCatalogsRepositoryDrizzle implements ReportCatalogsRepository
       db.select({ id: categoryTable.id, name: categoryTable.name }).from(categoryTable).orderBy(categoryTable.name),
     ]);
     return { regions, types, providers, categories };
+  }
+
+  async getCommunes(): Promise<CatalogItem[]> {
+    const db = getDb();
+    return db
+      .select({ id: communeTable.id, name: communeTable.name, detail: regionTable.name })
+      .from(communeTable)
+      .innerJoin(provinceTable, eq(communeTable.provinceId, provinceTable.id))
+      .innerJoin(regionTable, eq(provinceTable.regionId, regionTable.id))
+      .orderBy(communeTable.name);
   }
 }

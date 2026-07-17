@@ -12,21 +12,42 @@ import {
   regionTable,
   typeTable,
 } from '@/infra/db/schema';
+import type { ComparisonBreakdown, ComparisonEntityKind } from '@/core/domain/constants/comparison';
 import type {
-  BrandGeoRow,
-  BrandMonthRow,
-  BrandPhotoRow,
-  BrandReviewFilters,
-  BrandReviewRepository,
-  BrandTotalsRow,
-  BrandTypeRow,
-  GeoLevel,
+  ComparisonFilters,
+  ComparisonReviewRepository,
+  EntityBreakdownRow,
+  EntityMonthRow,
+  EntityPhotoRow,
+  EntityTotalsRow,
   YearMonth,
-} from '@/core/application/ports/BrandReviewRepository';
+} from '@/core/application/ports/ComparisonReviewRepository';
 
 function periodKey(ym: YearMonth): number {
   return ym.year * 100 + ym.month;
 }
+
+type EntitySqlSpec = {
+  /** Columna de agrupación y de identidad de la entidad */
+  id: AnyPgColumn;
+  /** Nombre display de la entidad */
+  name: AnyPgColumn;
+  /** Columna del inArray(entityIds): FK indexada, puede diferir de id */
+  filter: AnyPgColumn;
+};
+
+/**
+ * Mapa dimensión → columnas SQL. Sirve tanto para la dimensión comparada como
+ * para los breakdowns secundarios. Región se filtra vía Province.regionId
+ * (Commune → Province → Region: la comuna no referencia la región directo).
+ */
+const ENTITY_SQL: Record<ComparisonEntityKind, EntitySqlSpec> = {
+  brand: { id: brandTable.id, name: brandTable.name, filter: elementRecordTable.brandId },
+  type: { id: typeTable.id, name: typeTable.name, filter: elementTable.typeId },
+  region: { id: regionTable.id, name: regionTable.name, filter: provinceTable.regionId },
+  commune: { id: communeTable.id, name: communeTable.name, filter: elementTable.communeId },
+  category: { id: categoryTable.id, name: categoryTable.name, filter: brandTable.categoryId },
+};
 
 /** Expresiones de métricas compartidas por todas las agregaciones */
 const metricSelects = {
@@ -42,14 +63,15 @@ function weightedPct(column: AnyPgColumn) {
   return sql<number | null>`SUM(${elementRecordTable.persons} * ${column}) / NULLIF(SUM(${elementRecordTable.persons}), 0)`;
 }
 
-export class BrandReviewRepositoryDrizzle implements BrandReviewRepository {
+export class ComparisonReviewRepositoryDrizzle implements ComparisonReviewRepository {
   /**
-   * Condiciones de filtro compartidas. Requiere que la query tenga joins a:
-   * Element (siempre), Commune+Province (por regionId), Brand (por categoryId).
+   * Condiciones de filtro compartidas. El inArray sobre la columna de la
+   * dimensión excluye registros no atribuibles (columna NULL): un soporte sin
+   * comuna no cuenta para ningún territorio, uno sin marca para ninguna categoría.
    */
-  private buildConditions(f: BrandReviewFilters): SQL[] {
+  private buildConditions(f: ComparisonFilters): SQL[] {
     const parts: SQL[] = [
-      inArray(elementRecordTable.brandId, f.brandIds),
+      inArray(ENTITY_SQL[f.kind].filter, f.entityIds),
       sql`(${elementRecordTable.year} * 100 + ${elementRecordTable.month}) BETWEEN ${periodKey(f.from)} AND ${periodKey(f.to)}`,
     ];
     if (f.typeId) parts.push(eq(elementTable.typeId, f.typeId));
@@ -60,13 +82,26 @@ export class BrandReviewRepositoryDrizzle implements BrandReviewRepository {
     return parts;
   }
 
-  async aggregateByBrand(f: BrandReviewFilters): Promise<BrandTotalsRow[]> {
-    const db = getDb();
-    const rows = await db
+  /**
+   * Join chain único para todas las agregaciones (FKs indexadas; Postgres
+   * elimina los left joins no referenciados). Brand va en left join: comparando
+   * formatos/territorios cuentan también los registros sin marca.
+   * Nota: no se tipa como helper genérico porque el builder encadenado de
+   * Drizzle no infiere bien un `SelectedFields` parametrizado; se repite
+   * el chain literal en cada método sobre el mismo `getDb().select(...)`.
+   */
+
+  async aggregateTotals(f: ComparisonFilters): Promise<EntityTotalsRow[]> {
+    const entity = ENTITY_SQL[f.kind];
+    const withCategory = f.kind === 'brand';
+    const rows = await getDb()
       .select({
-        brandId: sql<number>`${elementRecordTable.brandId}`.mapWith(Number),
-        brandName: brandTable.name,
-        categoryName: categoryTable.name,
+        entityId: sql<number>`${entity.id}`.mapWith(Number),
+        // el inArray sobre la columna de la dimensión garantiza nombre no nulo
+        entityName: sql<string>`${entity.name}`,
+        categoryName: withCategory
+          ? sql<string | null>`${categoryTable.name}`
+          : sql<string | null>`NULL`,
         ...metricSelects,
         malePct: weightedPct(elementRecordTable.malePct),
         femalePct: weightedPct(elementRecordTable.femalePct),
@@ -76,12 +111,14 @@ export class BrandReviewRepositoryDrizzle implements BrandReviewRepository {
       })
       .from(elementRecordTable)
       .innerJoin(elementTable, eq(elementRecordTable.elementId, elementTable.id))
-      .innerJoin(brandTable, eq(elementRecordTable.brandId, brandTable.id))
+      .leftJoin(brandTable, eq(elementRecordTable.brandId, brandTable.id))
       .leftJoin(categoryTable, eq(brandTable.categoryId, categoryTable.id))
+      .leftJoin(typeTable, eq(elementTable.typeId, typeTable.id))
       .leftJoin(communeTable, eq(elementTable.communeId, communeTable.id))
       .leftJoin(provinceTable, eq(communeTable.provinceId, provinceTable.id))
+      .leftJoin(regionTable, eq(provinceTable.regionId, regionTable.id))
       .where(and(...this.buildConditions(f)))
-      .groupBy(elementRecordTable.brandId, brandTable.name, categoryTable.name);
+      .groupBy(entity.id, entity.name, ...(withCategory ? [categoryTable.name] : []));
 
     return rows.map(({ malePct, femalePct, nseHighPct, nseMidPct, nseLowPct, ...rest }) => ({
       ...rest,
@@ -98,11 +135,11 @@ export class BrandReviewRepositoryDrizzle implements BrandReviewRepository {
     }));
   }
 
-  async aggregateByBrandMonth(f: BrandReviewFilters): Promise<BrandMonthRow[]> {
-    const db = getDb();
-    return db
+  async aggregateByMonth(f: ComparisonFilters): Promise<EntityMonthRow[]> {
+    const entity = ENTITY_SQL[f.kind];
+    return getDb()
       .select({
-        brandId: sql<number>`${elementRecordTable.brandId}`.mapWith(Number),
+        entityId: sql<number>`${entity.id}`.mapWith(Number),
         year: sql<number>`${elementRecordTable.year}`.mapWith(Number),
         month: sql<number>`${elementRecordTable.month}`.mapWith(Number),
         ...metricSelects,
@@ -110,65 +147,49 @@ export class BrandReviewRepositoryDrizzle implements BrandReviewRepository {
       .from(elementRecordTable)
       .innerJoin(elementTable, eq(elementRecordTable.elementId, elementTable.id))
       .leftJoin(brandTable, eq(elementRecordTable.brandId, brandTable.id))
-      .leftJoin(communeTable, eq(elementTable.communeId, communeTable.id))
-      .leftJoin(provinceTable, eq(communeTable.provinceId, provinceTable.id))
-      .where(and(...this.buildConditions(f)))
-      .groupBy(elementRecordTable.brandId, elementRecordTable.year, elementRecordTable.month)
-      .orderBy(elementRecordTable.year, elementRecordTable.month);
-  }
-
-  async aggregateByBrandGeo(f: BrandReviewFilters, level: GeoLevel): Promise<BrandGeoRow[]> {
-    const db = getDb();
-    const geo =
-      level === 'region'
-        ? { id: regionTable.id, name: regionTable.name }
-        : { id: communeTable.id, name: communeTable.name };
-
-    return db
-      .select({
-        brandId: sql<number>`${elementRecordTable.brandId}`.mapWith(Number),
-        geoId: sql<number>`${geo.id}`.mapWith(Number),
-        // el WHERE isNotNull(geo.id) garantiza nombre no nulo
-        geoName: sql<string>`${geo.name}`,
-        ...metricSelects,
-      })
-      .from(elementRecordTable)
-      .innerJoin(elementTable, eq(elementRecordTable.elementId, elementTable.id))
-      .leftJoin(brandTable, eq(elementRecordTable.brandId, brandTable.id))
+      .leftJoin(categoryTable, eq(brandTable.categoryId, categoryTable.id))
+      .leftJoin(typeTable, eq(elementTable.typeId, typeTable.id))
       .leftJoin(communeTable, eq(elementTable.communeId, communeTable.id))
       .leftJoin(provinceTable, eq(communeTable.provinceId, provinceTable.id))
       .leftJoin(regionTable, eq(provinceTable.regionId, regionTable.id))
-      // Excluye soportes sin comuna vinculada (no se pueden ubicar geográficamente)
-      .where(and(...this.buildConditions(f), isNotNull(geo.id)))
-      .groupBy(elementRecordTable.brandId, geo.id, geo.name);
+      .where(and(...this.buildConditions(f)))
+      .groupBy(entity.id, elementRecordTable.year, elementRecordTable.month)
+      .orderBy(elementRecordTable.year, elementRecordTable.month);
   }
 
-  async aggregateByBrandType(f: BrandReviewFilters): Promise<BrandTypeRow[]> {
-    const db = getDb();
-    return db
+  async aggregateByBreakdown(
+    f: ComparisonFilters,
+    breakdown: ComparisonBreakdown,
+  ): Promise<EntityBreakdownRow[]> {
+    const entity = ENTITY_SQL[f.kind];
+    const bd = ENTITY_SQL[breakdown];
+    return getDb()
       .select({
-        brandId: sql<number>`${elementRecordTable.brandId}`.mapWith(Number),
-        typeId: sql<number>`${typeTable.id}`.mapWith(Number),
-        // el WHERE isNotNull(typeTable.id) garantiza nombre no nulo
-        typeName: sql<string>`${typeTable.name}`,
+        entityId: sql<number>`${entity.id}`.mapWith(Number),
+        breakdownId: sql<number>`${bd.id}`.mapWith(Number),
+        // el WHERE isNotNull(bd.id) garantiza nombre no nulo
+        breakdownName: sql<string>`${bd.name}`,
         ...metricSelects,
       })
       .from(elementRecordTable)
       .innerJoin(elementTable, eq(elementRecordTable.elementId, elementTable.id))
-      .leftJoin(typeTable, eq(elementTable.typeId, typeTable.id))
       .leftJoin(brandTable, eq(elementRecordTable.brandId, brandTable.id))
+      .leftJoin(categoryTable, eq(brandTable.categoryId, categoryTable.id))
+      .leftJoin(typeTable, eq(elementTable.typeId, typeTable.id))
       .leftJoin(communeTable, eq(elementTable.communeId, communeTable.id))
       .leftJoin(provinceTable, eq(communeTable.provinceId, provinceTable.id))
-      // Excluye registros sin tipo/formato definido
-      .where(and(...this.buildConditions(f), isNotNull(typeTable.id)))
-      .groupBy(elementRecordTable.brandId, typeTable.id, typeTable.name);
+      .leftJoin(regionTable, eq(provinceTable.regionId, regionTable.id))
+      // Excluye registros no atribuibles al breakdown (sin comuna, sin tipo, sin marca)
+      .where(and(...this.buildConditions(f), isNotNull(bd.id)))
+      .groupBy(entity.id, bd.id, bd.name);
   }
 
-  async samplePhotos(f: BrandReviewFilters, perBrand: number): Promise<BrandPhotoRow[]> {
+  async samplePhotos(f: ComparisonFilters, perEntity: number): Promise<EntityPhotoRow[]> {
     const db = getDb();
+    const entity = ENTITY_SQL[f.kind];
     const ranked = db
       .select({
-        brandId: sql<number>`${elementRecordTable.brandId}`.mapWith(Number).as('brand_id'),
+        entityId: sql<number>`${entity.id}`.mapWith(Number).as('entity_id'),
         recordId: sql<number>`${elementRecordTable.id}`.mapWith(Number).as('record_id'),
         photoUrl: sql<string>`${elementRecordTable.photoUrl}`.as('photo_url'),
         capturedAt: elementRecordTable.capturedAt,
@@ -176,7 +197,7 @@ export class BrandReviewRepositoryDrizzle implements BrandReviewRepository {
         // alias explícitos: Commune.name y Provider.name colisionan dentro del subquery
         communeName: sql<string | null>`${communeTable.name}`.as('commune_name'),
         providerName: sql<string | null>`${providerTable.name}`.as('provider_name'),
-        rowNumber: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${elementRecordTable.brandId} ORDER BY ${elementRecordTable.capturedAt} DESC NULLS LAST)`
+        rowNumber: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${entity.id} ORDER BY ${elementRecordTable.capturedAt} DESC NULLS LAST)`
           .mapWith(Number)
           .as('row_number'),
       })
@@ -184,22 +205,26 @@ export class BrandReviewRepositoryDrizzle implements BrandReviewRepository {
       .innerJoin(elementTable, eq(elementRecordTable.elementId, elementTable.id))
       .leftJoin(providerTable, eq(elementTable.providerId, providerTable.id))
       .leftJoin(brandTable, eq(elementRecordTable.brandId, brandTable.id))
+      .leftJoin(categoryTable, eq(brandTable.categoryId, categoryTable.id))
+      .leftJoin(typeTable, eq(elementTable.typeId, typeTable.id))
       .leftJoin(communeTable, eq(elementTable.communeId, communeTable.id))
       .leftJoin(provinceTable, eq(communeTable.provinceId, provinceTable.id))
+      .leftJoin(regionTable, eq(provinceTable.regionId, regionTable.id))
       // Solo URLs completas (las filas antiguas traen nombres de archivo sin host)
       .where(and(...this.buildConditions(f), sql`${elementRecordTable.photoUrl} ILIKE 'http%'`))
       .as('ranked_photos');
 
-    return db.select({
-      brandId: ranked.brandId,
-      recordId: ranked.recordId,
-      photoUrl: ranked.photoUrl,
-      capturedAt: ranked.capturedAt,
-      address: ranked.address,
-      communeName: ranked.communeName,
-      providerName: ranked.providerName,
-    })
+    return db
+      .select({
+        entityId: ranked.entityId,
+        recordId: ranked.recordId,
+        photoUrl: ranked.photoUrl,
+        capturedAt: ranked.capturedAt,
+        address: ranked.address,
+        communeName: ranked.communeName,
+        providerName: ranked.providerName,
+      })
       .from(ranked)
-      .where(lte(ranked.rowNumber, perBrand));
+      .where(lte(ranked.rowNumber, perEntity));
   }
 }

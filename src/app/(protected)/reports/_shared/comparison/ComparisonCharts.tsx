@@ -1,37 +1,23 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type {
-  BrandGeoRow,
-  BrandMonthRow,
-  BrandTypeRow,
-  YearMonth,
-} from '@/core/application/ports/BrandReviewRepository';
-import type { ShareMetric } from '@/core/application/usecases/GetBrandReview';
+import type { EntityMonthRow, YearMonth } from '@/core/application/ports/ComparisonReviewRepository';
+import type { ComparisonBreakdownResult, ShareMetric } from '@/core/application/usecases/GetComparisonReview';
 import ChartCard from '@/components/reports/ChartCard';
 import SovDonut from '@/components/charts/SovDonut';
 import TrendChart from '@/components/charts/TrendChart';
 import GroupedBarChart from '@/components/charts/GroupedBarChart';
 import StackedBarChart from '@/components/charts/StackedBarChart';
 import { cn } from '@/lib/utils';
-import {
-  type BrandMeta,
-  METRIC_AXIS_FORMATTERS,
-  METRIC_OPTIONS,
-  METRIC_TOOLTIP_FORMATTERS,
-  toChartSeries,
-  toDonutData,
-  toFormatData,
-  toGeoData,
-  toTrendData,
-} from './transforms';
+import { BREAKDOWN_LABELS, METRIC_AXIS_FORMATTERS, METRIC_OPTIONS, METRIC_TOOLTIP_FORMATTERS } from './labels';
+import { type EntityMeta, toBreakdownData, toChartSeries, toDonutData, toTrendData } from './transforms';
 
-interface ChartsPanelProps {
-  brands: Array<BrandMeta & { metrics: Record<ShareMetric, number> }>;
-  monthly: BrandMonthRow[];
-  geoRows: BrandGeoRow[];
-  geoLevel: 'region' | 'commune';
-  formatRows: BrandTypeRow[];
+const MAX_GROUPED_BARS = 8;
+
+interface ComparisonChartsProps {
+  entities: Array<EntityMeta & { metrics: Record<ShareMetric, number> }>;
+  monthly: EntityMonthRow[];
+  breakdowns: [ComparisonBreakdownResult, ComparisonBreakdownResult];
   from: YearMonth;
   to: YearMonth;
   hasAudience: boolean;
@@ -74,36 +60,37 @@ function MetricTabs({
   );
 }
 
-export default function ChartsPanel({
-  brands,
+export default function ComparisonCharts({
+  entities,
   monthly,
-  geoRows,
-  geoLevel,
-  formatRows,
+  breakdowns,
   from,
   to,
   hasAudience,
-}: ChartsPanelProps) {
+}: ComparisonChartsProps) {
   const [metric, setMetric] = useState<ShareMetric>('faces');
 
   const activeLabel = METRIC_OPTIONS.find((m) => m.key === metric)?.label ?? '';
   const tooltipFormatter = METRIC_TOOLTIP_FORMATTERS[metric];
   const axisFormatter = METRIC_AXIS_FORMATTERS[metric];
-  const series = useMemo(() => toChartSeries(brands), [brands]);
+  const series = useMemo(() => toChartSeries(entities), [entities]);
 
   const donutData = useMemo(
-    () => toDonutData(brands.map((b) => ({ ...b, value: b.metrics[metric] }))),
-    [brands, metric],
+    () => toDonutData(entities.map((e) => ({ ...e, value: e.metrics[metric] }))),
+    [entities, metric],
   );
-  const trendData = useMemo(
-    () => toTrendData(monthly, brands, metric, from, to),
-    [monthly, brands, metric, from, to],
+  const trendData = useMemo(() => toTrendData(monthly, entities, metric, from, to), [monthly, entities, metric, from, to]);
+  const [grouped, stacked] = breakdowns;
+  const groupedData = useMemo(
+    () => toBreakdownData(grouped.rows, entities, metric, MAX_GROUPED_BARS),
+    [grouped.rows, entities, metric],
   );
-  const geoData = useMemo(() => toGeoData(geoRows, brands, metric), [geoRows, brands, metric]);
-  const formatData = useMemo(
-    () => toFormatData(formatRows, brands, metric),
-    [formatRows, brands, metric],
+  const stackedData = useMemo(
+    () => toBreakdownData(stacked.rows, entities, metric),
+    [stacked.rows, entities, metric],
   );
+  const groupedLabel = BREAKDOWN_LABELS[grouped.kind];
+  const stackedLabel = BREAKDOWN_LABELS[stacked.kind];
 
   return (
     <div className="space-y-4">
@@ -119,14 +106,11 @@ export default function ChartsPanel({
         <ChartCard title={`Tendencia mensual — ${activeLabel}`} subtitle="Evolución en el período">
           <TrendChart data={trendData} series={series} valueFormatter={axisFormatter} />
         </ChartCard>
-        <ChartCard
-          title={`Distribución geográfica — ${activeLabel}`}
-          subtitle={geoLevel === 'region' ? 'Por región (top 8)' : 'Por comuna (top 8)'}
-        >
-          <GroupedBarChart data={geoData} series={series} valueFormatter={axisFormatter} />
+        <ChartCard title={`${groupedLabel.chartTitle} — ${activeLabel}`} subtitle={groupedLabel.chartSubtitle}>
+          <GroupedBarChart data={groupedData} series={series} valueFormatter={axisFormatter} />
         </ChartCard>
-        <ChartCard title={`Mix de formatos — ${activeLabel}`} subtitle="Composición por marca en cada formato">
-          <StackedBarChart data={formatData} series={series} valueFormatter={axisFormatter} />
+        <ChartCard title={`${stackedLabel.chartTitle} — ${activeLabel}`} subtitle={stackedLabel.chartSubtitle}>
+          <StackedBarChart data={stackedData} series={series} valueFormatter={axisFormatter} />
         </ChartCard>
       </div>
     </div>

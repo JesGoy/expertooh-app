@@ -280,7 +280,7 @@ type SessionData = {
 ```
 
 **Profile-based Access**:
-- Reports module (`/reports` and children, e.g. `/reports/brand-review`): profiles `'agencia'` and `'admin'` (see `REPORTS` registry `profiles` field)
+- Reports module (`/reports` and children, e.g. `/reports/brand-review`, `/reports/format-review`, `/reports/territory-review`, `/reports/category-review`): profiles `'agencia'` and `'admin'` (see `REPORTS` registry `profiles` field)
 - Check profile in page using the constants module, never string literals:
   `if (!canAccessReport(session.profile, report)) redirect(ROUTES.DASHBOARD);`
 
@@ -307,7 +307,7 @@ type SessionData = {
 **No magic strings/numbers**:
 - User profiles: import from `src/core/domain/constants/profiles.ts` (`USER_PROFILES`, `UserProfile` type). Never write `'agencia'`/`'admin'` literals in pages, actions or components.
 - Routes: import from `src/lib/routes.ts` (`ROUTES.LOGIN`, `ROUTES.DASHBOARD`, `ROUTES.REPORTS`, `ROUTES.REPORT_BRAND_REVIEW`, ...). Never write `'/login'`/`'/dashboard'` literals.
-- Repeated numeric limits (page sizes, max selections) → named constants near their domain (`MAX_BRANDS_PER_REVIEW`), not inline numbers.
+- Repeated numeric limits (page sizes, max selections) → named constants near their domain (`MAX_ENTITIES_PER_COMPARISON`), not inline numbers.
 
 **No hardcoded colors**:
 - Forbidden: literal `#hex` values inside components/pages (e.g. `bg-[#FF6B00]`).
@@ -376,8 +376,8 @@ src/
       entities/        # Domain entities (User.ts)
       errors/          # Domain errors (AuthErrors.ts, PasswordErrors.ts, ReportErrors.ts)
     application/
-      ports/           # Interfaces (UserRepository.ts, BrandReviewRepository.ts)
-      usecases/        # Business logic (LoginUser.ts, GetBrandReview.ts)
+      ports/           # Interfaces (UserRepository.ts, ComparisonReviewRepository.ts)
+      usecases/        # Business logic (LoginUser.ts, GetComparisonReview.ts)
   infra/
     repositories/      # Drizzle implementations (*RepositoryDrizzle.ts)
     db/
@@ -390,7 +390,7 @@ src/
       reports.ts       # DI factories (reports domain)
   lib/
     utils.ts           # cn() and generic helpers (single source)
-    routes.ts          # Route constants (ROUTES)
+    routes.ts          # Route constants (ROUTES, API_ROUTES)
   styles/
     theme.ts           # Theme tokens (brand, ink) — source of CSS vars
     chartPalette.ts    # Categorical chart palette
